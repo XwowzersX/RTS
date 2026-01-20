@@ -65,10 +65,18 @@ export function CanvasRenderer({
     ctx.save();
     ctx.translate(-offset.x, -offset.y);
     
+    // Water/Infinite ground
+    ctx.fillStyle = "#111418";
+    ctx.fillRect(-10000, -10000, 20000, 20000);
+
     // Map Border
     ctx.strokeStyle = "#333";
     ctx.lineWidth = 5;
     ctx.strokeRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
+    
+    // Background color for playable area
+    ctx.fillStyle = "#1a1d23";
+    ctx.fillRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
 
     // Grid lines
     ctx.strokeStyle = "#ffffff05";
@@ -213,7 +221,17 @@ export function CanvasRenderer({
       return;
     }
 
-    if (e.button === 0) { // Left Click
+    if (e.button === 0 && e.altKey) { // Alt + Left Click = Pan
+      e.preventDefault();
+      setIsPanning(true);
+      setDragStart({ x: e.clientX, y: e.clientY });
+    } else if (e.button === 1) { // Middle Click Pan
+      e.preventDefault();
+      setIsPanning(true);
+      setDragStart({ x: e.clientX, y: e.clientY });
+    }
+    
+    if (e.button === 0 && !e.altKey) { // Left Click (Normal)
       if (placementMode) {
         const worldPos = screenToWorld(e.clientX, e.clientY);
         onBuild(worldPos);

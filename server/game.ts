@@ -184,14 +184,17 @@ export class Game {
   }
 
   private moveTowards(entity: Entity, target: Position) {
-    const speed = (UNIT_STATS[entity.type as UnitType]?.speed || 1) * 2; // Speed multiplier
+    const speed = (UNIT_STATS[entity.type as UnitType]?.speed || 1) * 3; // Increase speed for responsiveness
     const dx = target.x - entity.position.x;
     const dy = target.y - entity.position.y;
     const dist = Math.sqrt(dx*dx + dy*dy);
     
-    if (dist > 0) {
+    if (dist > 5) { // Stop close enough
       entity.position.x += (dx / dist) * speed;
       entity.position.y += (dy / dist) * speed;
+    } else {
+      entity.position.x = target.x;
+      entity.position.y = target.y;
     }
   }
 
