@@ -1,0 +1,214 @@
+import { useEffect, useMemo } from "react";
+import { useRoute } from "wouter";
+import { useMutation } from "@tanstack/react-query";
+import { api } from "@shared/routes";
+import { useGameSocket } from "@/hooks/use-game-socket";
+import { useGameControls } from "@/hooks/use-game-controls";
+import { CanvasRenderer } from "@/components/game/CanvasRenderer";
+import { ResourcesDisplay } from "@/components/game/ResourcesDisplay";
+import { ActionGrid } from "@/components/game/ActionGrid";
+import { Loader2, Copy, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { Card } from "@/components/ui/card";
+import { BuildingType } from "@shared/schema";
+
+export default function Game() {
+  const [match, params] = useRoute("/game/:id");
+  const gameId = match ? params.id : null;
+  const { toast } = useToast();
+
+  // 1. Join Game API (HTTP) to get Player ID
+  const joinMutation = useMutation({
+    mutationFn: async (gid: string) => {
+      const res = await fetch(api.game.join.path, {
+        method: api.game.join.method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId: gid })
+      });
+      if (!res.ok) throw new Error('Failed to join game');
+      return await res.json() as { playerId: string, color: string };
+    }
+  });
+
+  // 2. Connect WebSocket
+  const { socket, gameState, isConnected, sendMessage } = useGameSocket(gameId);
+
+  // 3. Game Controls
+  const { 
+    selection, 
+    setSelection, 
+    actions, 
+    placementMode, 
+    setPlacementMode 
+  } = useGameControls({ 
+    sendMessage, 
+    playerId: joinMutation.data?.playerId ?? null 
+  });
+
+  // Initial Join
+  useEffect(() => {
+    if (gameId && !joinMutation.data && !joinMutation.isPending) {
+      joinMutation.mutate(gameId, {
+        onSuccess: (data) => {
+          // Once HTTP join successful, send WS join
+          // Note: useGameSocket handles the connection, we just need to send the join packet once connected
+          // However, the hook handles connection. We need to wait for 'open'.
+        },
+        onError: () => {
+          toast({ variant: "destructive", title: "Join Failed", description: "Game might be full or finished." });
+        }
+      });
+    }
+  }, [gameId]);
+
+  // Send WS Join when socket opens and we have playerId
+  useEffect(() => {
+    if (isConnected && joinMutation.data && gameId) {
+      sendMessage('join_game', { name: 'Player', gameId });
+    }
+  }, [isConnected, joinMutation.data, gameId, sendMessage]);
+
+  const copyInviteLink = () => {
+    navigator.clipboard.writeText(window.location.href);
+    toast({ title: "Copied!", description: "Invite link copied to clipboard." });
+  };
+
+  // Derived State
+  const myPlayer = useMemo(() => {
+    if (!gameState || !joinMutation.data) return undefined;
+    return gameState.players[joinMutation.data.playerId];
+  }, [gameState, joinMutation.data]);
+
+  const selectedEntity = useMemo(() => {
+    if (!gameState || selection.length !== 1) return undefined;
+    return gameState.entities[selection[0]];
+  }, [gameState, selection]);
+
+  // --- RENDER ---
+
+  if (joinMutation.isPending || (joinMutation.isSuccess && !gameState)) {
+    return (
+      <div className="h-screen w-screen bg-black flex flex-col items-center justify-center text-white">
+        <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
+        <h2 className="text-2xl font-cinzel">Connecting to Command...</h2>
+        {gameId && (
+          <div className="mt-8 flex items-center gap-2 bg-white/5 px-4 py-2 rounded-full border border-white/10">
+            <span className="text-sm font-mono text-muted-foreground">ID: {gameId}</span>
+            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={copyInviteLink}>
+              <Copy className="w-3 h-3" />
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (joinMutation.isError) {
+    return (
+      <div className="h-screen w-screen flex flex-col items-center justify-center bg-background text-white p-4 text-center">
+        <AlertTriangle className="w-16 h-16 text-destructive mb-4" />
+        <h1 className="text-3xl font-bold mb-2">Connection Failed</h1>
+        <p className="text-muted-foreground mb-6">Could not join the game session.</p>
+        <Button onClick={() => window.location.href = '/'}>Return to Lobby</Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-screen h-screen overflow-hidden bg-black select-none">
+      
+      {/* Game Canvas Layer */}
+      <CanvasRenderer 
+        gameState={gameState}
+        playerId={joinMutation.data?.playerId ?? null}
+        selection={selection}
+        onSelectionChange={setSelection}
+        onAction={(type, targetId, pos) => {
+          if (type === 'move' && pos) actions.moveUnits(pos);
+          if (type === 'attack' && targetId) actions.attackEntity(targetId);
+          if (type === 'gather' && targetId) actions.gatherResource(targetId);
+        }}
+        placementMode={placementMode}
+        onBuild={actions.buildStructure}
+      />
+
+      {/* --- HUD OVERLAY --- */}
+
+      {/* Top Bar: Resources */}
+      <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-start pointer-events-none">
+        <ResourcesDisplay playerState={myPlayer} className="pointer-events-auto" />
+        
+        {/* Game ID & Copy (Top Right) */}
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="pointer-events-auto bg-black/60 border-white/10 backdrop-blur-md hover:bg-white/10"
+          onClick={copyInviteLink}
+        >
+          <span className="mr-2 text-xs opacity-50">Match ID:</span>
+          <span className="font-mono">{gameId?.slice(0, 8)}...</span>
+          <Copy className="w-3 h-3 ml-2" />
+        </Button>
+      </div>
+
+      {/* Bottom Bar: Controls */}
+      <div className="absolute bottom-0 left-0 right-0 p-4 flex items-end justify-center gap-4 pointer-events-none">
+        
+        {/* Selection Info Panel */}
+        <div className="hidden md:flex flex-col justify-end pointer-events-auto">
+          {selectedEntity ? (
+            <Card className="w-64 h-32 bg-black/80 border-white/10 backdrop-blur-md text-white p-4 shadow-xl">
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="font-bold text-lg capitalize">{selectedEntity.type.replace('_', ' ')}</h3>
+                <span className="text-xs bg-white/20 px-2 py-0.5 rounded text-white/80">
+                  lvl 1
+                </span>
+              </div>
+              <div className="space-y-1 text-sm text-gray-400">
+                <div className="flex justify-between">
+                  <span>HP</span>
+                  <span className="text-green-400 font-mono">{Math.floor(selectedEntity.hp)}/{selectedEntity.maxHp}</span>
+                </div>
+                {selectedEntity.state !== 'idle' && (
+                  <div className="flex justify-between">
+                    <span>Status</span>
+                    <span className="text-amber-400 animate-pulse uppercase text-xs">{selectedEntity.state}</span>
+                  </div>
+                )}
+              </div>
+            </Card>
+          ) : (
+             <div className="w-64 h-32" /> // Spacer
+          )}
+        </div>
+
+        {/* Action Grid */}
+        <div className="pointer-events-auto bg-black/80 p-2 rounded-xl border border-white/10 backdrop-blur-md shadow-2xl">
+           <ActionGrid 
+             selection={selection}
+             entityType={selectedEntity?.type as BuildingType}
+             onTrain={(type) => actions.trainUnit(selection[0], type)}
+             onBuild={(type) => setPlacementMode(type)}
+             onStop={() => {}} // TODO: Add stop action
+             isPlacementActive={!!placementMode}
+           />
+        </div>
+
+      </div>
+
+      {/* Game End Overlay */}
+      {gameState?.status === 'ended' && (
+        <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-50 pointer-events-auto animate-in fade-in duration-1000">
+          <h1 className="text-6xl font-black text-amber-500 mb-4 font-cinzel">GAME OVER</h1>
+          <p className="text-2xl text-white mb-8">
+            {gameState.winner === joinMutation.data?.playerId ? "VICTORY" : "DEFEAT"}
+          </p>
+          <Button size="lg" onClick={() => window.location.href = '/'}>
+            Return to Lobby
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}

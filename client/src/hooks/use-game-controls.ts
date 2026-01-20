@@ -1,0 +1,67 @@
+import { useState, useCallback } from 'react';
+import type { Position, BuildingType, UnitType } from '@shared/schema';
+import { WS_MESSAGES } from '@shared/schema';
+
+interface UseGameControlsProps {
+  sendMessage: (type: string, payload: any) => void;
+  playerId: string | null;
+}
+
+export function useGameControls({ sendMessage, playerId }: UseGameControlsProps) {
+  const [selection, setSelection] = useState<string[]>([]);
+  const [placementMode, setPlacementMode] = useState<BuildingType | null>(null);
+
+  const moveUnits = useCallback((target: Position) => {
+    if (selection.length === 0) return;
+    sendMessage(WS_MESSAGES.ACTION_MOVE, {
+      entityIds: selection,
+      target
+    });
+  }, [selection, sendMessage]);
+
+  const attackEntity = useCallback((targetEntityId: string) => {
+    if (selection.length === 0) return;
+    sendMessage(WS_MESSAGES.ACTION_ATTACK, {
+      entityIds: selection,
+      targetEntityId
+    });
+  }, [selection, sendMessage]);
+
+  const gatherResource = useCallback((resourceId: string) => {
+    if (selection.length === 0) return;
+    sendMessage(WS_MESSAGES.ACTION_GATHER, {
+      entityIds: selection,
+      resourceId
+    });
+  }, [selection, sendMessage]);
+
+  const buildStructure = useCallback((position: Position) => {
+    if (!placementMode) return;
+    sendMessage(WS_MESSAGES.ACTION_BUILD, {
+      buildingType: placementMode,
+      position
+    });
+    setPlacementMode(null); // Exit placement mode after build command
+  }, [placementMode, sendMessage]);
+
+  const trainUnit = useCallback((buildingId: string, unitType: UnitType) => {
+    sendMessage(WS_MESSAGES.ACTION_TRAIN, {
+      buildingId,
+      unitType
+    });
+  }, [sendMessage]);
+
+  return {
+    selection,
+    setSelection,
+    placementMode,
+    setPlacementMode,
+    actions: {
+      moveUnits,
+      attackEntity,
+      gatherResource,
+      buildStructure,
+      trainUnit
+    }
+  };
+}

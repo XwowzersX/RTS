@@ -1,37 +1,51 @@
-import { type User, type InsertUser } from "@shared/schema";
-import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
+import { users, type User, type InsertUser } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
+import { Game } from "./game";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
+  getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  
+  // Game Storage
+  createGame(): Game;
+  getGame(id: string): Game | undefined;
 }
 
 export class MemStorage implements IStorage {
-  private users: Map<string, User>;
+  private games: Map<string, Game>;
 
   constructor() {
-    this.users = new Map();
+    this.games = new Map();
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+    const [user] = await db.insert(users).values(insertUser).returning();
     return user;
+  }
+
+  createGame(): Game {
+    const id = Math.random().toString(36).substring(7);
+    const game = new Game(id, (state) => {
+      // Broadcast hook - handled in routes
+    });
+    this.games.set(id, game);
+    return game;
+  }
+
+  getGame(id: string): Game | undefined {
+    return this.games.get(id);
   }
 }
 
