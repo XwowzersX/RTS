@@ -22,13 +22,16 @@ export async function registerRoutes(
     const { gameId } = req.body;
     const game = storage.getGame(gameId);
     if (!game) {
+      console.log(`Join failed: Game ${gameId} not found`);
       return res.status(404).json({ message: "Game not found" });
     }
     const playerId = game.addPlayer("Player");
     const player = game.state.players[playerId];
+    console.log(`Player ${playerId} (${player.color}) joined game ${gameId}`);
     
     // Start game if 2 players
     if (Object.keys(game.state.players).length === 2) {
+      console.log(`Game ${gameId} starting...`);
       game.start();
     }
 
@@ -38,24 +41,27 @@ export async function registerRoutes(
   // WebSocket
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
 
-  wss.on('connection', (socket) => {
+  wss.on('connection', (socket: any) => {
+    console.log('New WS connection established');
     let currentGameId: string | null = null;
     let currentPlayerId: string | null = null;
 
-    socket.on('message', (data) => {
+    socket.on('message', (data: any) => {
       try {
         const message = JSON.parse(data.toString());
+        console.log('WS Message received:', message.type);
         
         if (message.type === 'join_game') {
-          const { gameId, playerId } = message; // Frontend needs to send playerId obtained from REST
+          const { gameId, playerId } = message;
+          socket.gameId = gameId; // Critical for the broadcast logic below
           currentGameId = gameId;
           currentPlayerId = playerId;
           
+          console.log(`WS Client joined game channel: ${gameId} as ${playerId}`);
+          
           const game = storage.getGame(gameId);
           if (game) {
-             // Setup broadcast listener for this socket
-             // In a real app, use an event emitter. Here we hack it for MVP
-             // We'll just poll or let the Game loop handle broadcasting to clients map
+             socket.send(JSON.stringify({ type: 'game_update', payload: game.state }));
           }
         } else if (currentGameId && currentPlayerId) {
           const game = storage.getGame(currentGameId);
@@ -66,6 +72,10 @@ export async function registerRoutes(
       } catch (err) {
         console.error('WS Error', err);
       }
+    });
+
+    socket.on('close', () => {
+      console.log('WS connection closed');
     });
   });
 
@@ -78,7 +88,7 @@ export async function registerRoutes(
     });
   }, 100);
   
-  // Better approach: Hook into Game.onUpdate
+  // Hook into Game.onUpdate
   // We need to register the callback when creating the game, but we need access to WSS.
   // We can patch the game instances in the storage.
   
@@ -97,23 +107,6 @@ export async function registerRoutes(
     (storage as any).games.set(id, game);
     return game;
   };
-
-  // Enhance WS connection to store gameId
-  wss.on('connection', (socket: any) => {
-     socket.on('message', (data: any) => {
-        try {
-            const msg = JSON.parse(data.toString());
-            if (msg.type === 'join_game') {
-                socket.gameId = msg.gameId;
-                // Send initial state immediately
-                const game = storage.getGame(msg.gameId);
-                if (game) {
-                    socket.send(JSON.stringify({ type: 'game_update', payload: game.state }));
-                }
-            }
-        } catch(e) {}
-     });
-  });
 
   return httpServer;
 }
