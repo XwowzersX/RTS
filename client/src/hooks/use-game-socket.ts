@@ -14,7 +14,8 @@ export function useGameSocket(gameId: string | null) {
     if (!gameId) return;
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws?gameId=${gameId}`;
+    const host = window.location.host;
+    const wsUrl = `${protocol}//${host}/ws`;
     const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
@@ -27,7 +28,9 @@ export function useGameSocket(gameId: string | null) {
     ws.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data);
-        if (message.type === WS_MESSAGES.GAME_UPDATE) {
+        console.log("WS message received:", message.type);
+        // Normalize the message type check to be case-insensitive or handle both
+        if (message.type === "game_update" || message.type === "GAME_UPDATE") {
           setGameState(message.payload);
         } else if (message.type === 'error') {
           toast({

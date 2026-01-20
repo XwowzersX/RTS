@@ -65,7 +65,11 @@ export default function Game() {
   // Send WS Join when socket opens and we have playerId
   useEffect(() => {
     if (isConnected && joinMutation.data && gameId) {
-      sendMessage('join_game', { name: 'Player', gameId });
+      console.log('Sending WS join_game with playerId:', joinMutation.data.playerId);
+      sendMessage('join_game', { 
+        gameId, 
+        playerId: joinMutation.data.playerId 
+      });
     }
   }, [isConnected, joinMutation.data, gameId, sendMessage]);
 

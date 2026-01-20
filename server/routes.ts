@@ -46,14 +46,29 @@ export async function registerRoutes(
     let currentGameId: string | null = null;
     let currentPlayerId: string | null = null;
 
+    // Use a heartbeat to detect disconnected clients
+    socket.isAlive = true;
+    socket.on('pong', () => { socket.isAlive = true; });
+
     socket.on('message', (data: any) => {
       try {
         const message = JSON.parse(data.toString());
         console.log('WS Message received:', message.type);
         
         if (message.type === 'join_game') {
-          const { gameId, playerId } = message;
-          socket.gameId = gameId; // Critical for the broadcast logic below
+          console.log('Join Game Message Full:', JSON.stringify(message));
+          
+          // The message sent from Game.tsx is sendMessage('join_game', { gameId, playerId })
+          // So message = { type: 'join_game', payload: { gameId, playerId } }
+          const gameId = message.payload?.gameId;
+          const playerId = message.payload?.playerId;
+          
+          if (!gameId) {
+            console.error('WS Join failed: gameId is missing in payload');
+            return;
+          }
+
+          socket.gameId = gameId;
           currentGameId = gameId;
           currentPlayerId = playerId;
           
@@ -70,13 +85,30 @@ export async function registerRoutes(
           }
         }
       } catch (err) {
-        console.error('WS Error', err);
+        console.error('WS Error:', err);
       }
+    });
+
+    socket.on('error', (err: any) => {
+      console.error('WS Socket Error:', err);
     });
 
     socket.on('close', () => {
       console.log('WS connection closed');
     });
+  });
+
+  // Heartbeat interval
+  const interval = setInterval(() => {
+    wss.clients.forEach((ws: any) => {
+      if (ws.isAlive === false) return ws.terminate();
+      ws.isAlive = false;
+      ws.ping();
+    });
+  }, 30000);
+
+  wss.on('close', () => {
+    clearInterval(interval);
   });
 
   // Global Broadcast Loop (Hack for MVP to avoid complex subscription logic)
