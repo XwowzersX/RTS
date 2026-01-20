@@ -153,8 +153,8 @@ export class Game {
         const stats = UNIT_STATS[entity.type as UnitType];
         if (stats) {
           const dist = this.distance(entity.position, target.position);
-          if (dist <= stats.range) {
-             target.hp -= stats.attack * 0.1; // DPS
+          if (dist <= stats.range + 10) { // Small buffer
+             target.hp -= stats.attack * 0.2; // Increase DPS
           } else {
              this.moveTowards(entity, target.position);
           }
@@ -206,6 +206,7 @@ export class Game {
   handleAction(playerId: string, action: any) {
     if (action.type === 'action_move') {
        const { entityIds, target } = action.payload;
+       console.log(`Action Move for ${entityIds.length} units to ${JSON.stringify(target)}`);
        entityIds.forEach((id: string) => {
          const e = this.state.entities[id];
          if (e && e.playerId === playerId) {

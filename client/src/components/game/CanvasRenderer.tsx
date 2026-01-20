@@ -43,6 +43,35 @@ export function CanvasRenderer({
     y: wy - offset.y
   }), [offset]);
 
+  const [mousePos, setMousePos] = useState<Position>({ x: 0, y: 0 });
+
+  // Edge Scroll Effect
+  useEffect(() => {
+    const SCROLL_SPEED = 10;
+    const EDGE_MARGIN = 50;
+    
+    const interval = setInterval(() => {
+      setOffset(prev => {
+        let dx = 0;
+        let dy = 0;
+        
+        if (mousePos.x < EDGE_MARGIN) dx = -SCROLL_SPEED;
+        if (mousePos.x > window.innerWidth - EDGE_MARGIN) dx = SCROLL_SPEED;
+        if (mousePos.y < EDGE_MARGIN) dy = -SCROLL_SPEED;
+        if (mousePos.y > window.innerHeight - EDGE_MARGIN) dy = SCROLL_SPEED;
+        
+        if (dx === 0 && dy === 0) return prev;
+        
+        return {
+          x: Math.max(-100, Math.min(MAP_WIDTH - window.innerWidth + 100, prev.x + dx)),
+          y: Math.max(-100, Math.min(MAP_HEIGHT - window.innerHeight + 100, prev.y + dy))
+        };
+      });
+    }, 16);
+
+    return () => clearInterval(interval);
+  }, [mousePos]);
+
   // Main Render Loop
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -268,6 +297,7 @@ export function CanvasRenderer({
     } else if (selectionBox) {
       setSelectionBox(prev => prev ? { ...prev, current: { x: e.clientX, y: e.clientY } } : null);
     }
+    setMousePos({ x: e.clientX, y: e.clientY });
   };
 
   const handleMouseUp = (e: React.MouseEvent) => {
