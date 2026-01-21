@@ -43,13 +43,6 @@ export function ActionGrid({
       return (
         <>
           <ActionButton 
-            icon={Home} 
-            label="Resource Hub" 
-            cost={COSTS.resource_manager}
-            onClick={() => onBuild('resource_manager')} 
-            active={isPlacementActive}
-          />
-          <ActionButton 
             icon={Shield} 
             label="Barracks" 
             cost={COSTS.barracks}
@@ -90,7 +83,7 @@ export function ActionGrid({
     }
 
     // Hub trains workers & builder
-    if (entityType === 'hub' || entityType === 'resource_manager') {
+    if (entityType === 'hub') {
       return (
         <>
           <ActionButton 
@@ -115,26 +108,26 @@ export function ActionGrid({
       );
     }
 
-    // Workers can still build resource hubs for convenience
+    // Factories/Works menus
+    if (entityType === 'iron_works' || entityType === 'factory') {
+        return (
+            <div className="col-span-4 text-center text-muted-foreground text-sm py-8 italic">
+              Advanced tech researched...
+            </div>
+        );
+    }
+
+    // Workers no longer build
     if (entityType === 'lumberjack' || entityType === 'miner') {
       return (
-        <>
-          <ActionButton 
-            icon={Home} 
-            label="Resource Hub" 
-            cost={COSTS.resource_manager}
-            onClick={() => onBuild('resource_manager')} 
-            active={isPlacementActive}
-          />
-           <Button 
+        <Button 
             variant="destructive" 
-            className="col-span-3 h-16 flex flex-col gap-1 border-2 border-red-900/50 hover:border-red-500/50"
+            className="col-span-4 h-16 flex flex-col gap-1 border-2 border-red-900/50 hover:border-red-500/50"
             onClick={onStop}
-          >
+        >
             <MousePointer2 className="w-5 h-5" />
             <span className="text-xs uppercase tracking-wider">Stop</span>
-          </Button>
-        </>
+        </Button>
       );
     }
 

@@ -9,7 +9,7 @@ export const TICK_RATE = 10; // Updates per second
 
 export type ResourceType = 'wood' | 'stone' | 'iron' | 'ladders';
 export type UnitType = 'lumberjack' | 'miner' | 'knight' | 'archer' | 'builder';
-export type BuildingType = 'hub' | 'barracks' | 'iron_works' | 'factory' | 'resource_manager' | 'wall';
+export type BuildingType = 'hub' | 'barracks' | 'iron_works' | 'factory' | 'wall';
 
 export const COSTS: Record<UnitType | BuildingType, Partial<Record<ResourceType, number>>> = {
   // Units
@@ -23,7 +23,6 @@ export const COSTS: Record<UnitType | BuildingType, Partial<Record<ResourceType,
   barracks: { wood: 3, stone: 5 },
   iron_works: { wood: 10, stone: 7 },
   factory: { wood: 5, stone: 5 },
-  resource_manager: { wood: 3, stone: 5 },
   wall: { wood: 2, stone: 2 },
 };
 
@@ -40,7 +39,6 @@ export const BUILDING_STATS: Record<BuildingType, { hp: number, size: number }> 
   barracks: { hp: 300, size: 50 },
   iron_works: { hp: 300, size: 50 },
   factory: { hp: 300, size: 50 },
-  resource_manager: { hp: 200, size: 40 },
   wall: { hp: 500, size: 20 },
 };
 
@@ -58,8 +56,11 @@ export interface Entity {
   position: Position;
   hp: number;
   maxHp: number;
-  state: 'idle' | 'moving' | 'attacking' | 'gathering' | 'returning';
+  state: 'idle' | 'moving' | 'attacking' | 'gathering' | 'returning' | 'building';
   targetId?: string; // Attack target or resource target
+  targetPosition?: Position; // For construction
+  buildProgress?: number;
+  buildType?: BuildingType;
 }
 
 export interface PlayerState {
@@ -95,10 +96,10 @@ export type WsMessage =
   | { type: typeof WS_MESSAGES.ACTION_MOVE, payload: { entityIds: string[], target: Position } }
   | { type: typeof WS_MESSAGES.ACTION_ATTACK, payload: { entityIds: string[], targetEntityId: string } }
   | { type: typeof WS_MESSAGES.ACTION_GATHER, payload: { entityIds: string[], resourceId: string } }
-  | { type: typeof WS_MESSAGES.ACTION_BUILD, payload: { buildingType: BuildingType, position: Position } }
+  | { type: typeof WS_MESSAGES.ACTION_BUILD, payload: { buildingType: BuildingType, position: Position, builderId?: string } }
   | { type: typeof WS_MESSAGES.ACTION_TRAIN, payload: { buildingId: string, unitType: UnitType } };
 
-// --- DB Schema (For simple session tracking if needed, primarily MemStorage used) ---
+// --- DB Schema ---
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),

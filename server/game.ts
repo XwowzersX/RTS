@@ -111,6 +111,29 @@ export class Game {
   }
 
   private handleEntityBehavior(entity: Entity) {
+    if (entity.state === 'building' && entity.targetPosition) {
+        const dist = this.distance(entity.position, entity.targetPosition);
+        if (dist > 30) {
+            this.moveTowards(entity, entity.targetPosition);
+        } else if (entity.buildType) {
+            // Reached construction site
+            const id = randomUUID();
+            const buildingType = entity.buildType;
+            this.state.entities[id] = {
+                id,
+                playerId: entity.playerId,
+                type: buildingType,
+                position: { ...entity.targetPosition },
+                hp: BUILDING_STATS[buildingType].hp,
+                maxHp: BUILDING_STATS[buildingType].hp,
+                state: 'idle'
+            };
+            entity.state = 'idle';
+            entity.targetPosition = undefined;
+            entity.buildType = undefined;
+        }
+    }
+
     if (entity.state === 'moving' && entity.targetId) {
        // Movement logic handled by client-side prediction mostly, but server validates/simulates
        // For this MVP, we rely on `moveEntity` calls setting a destination or behavior
@@ -243,41 +266,27 @@ export class Game {
     }
     if (action.type === 'action_build') {
         const { buildingType, position, builderId } = action.payload;
+        if (!builderId) return;
+        
+        const builder = this.state.entities[builderId];
+        if (!builder || builder.type !== 'builder' || builder.playerId !== playerId) {
+            return;
+        }
+
         const cost = COSTS[buildingType as BuildingType];
         const player = this.state.players[playerId];
         
-        // Check if builder is provided and valid
-        if (builderId) {
-            const builder = this.state.entities[builderId];
-            if (!builder || builder.type !== 'builder' || builder.playerId !== playerId) {
-                return;
-            }
-        } else {
-            // For now, allow buildings without builderId for backward compatibility or if we don't enforce it strictly yet
-            // but the user wants "The builder, you can move him to build things"
-        }
-        
-        // Check cost
         let canAfford = true;
         if (cost.wood && player.resources.wood < cost.wood) canAfford = false;
         if (cost.stone && player.resources.stone < cost.stone) canAfford = false;
         
         if (canAfford) {
-            // Deduct
             if (cost.wood) player.resources.wood -= cost.wood;
             if (cost.stone) player.resources.stone -= cost.stone;
             
-            // Build
-            const id = randomUUID();
-            this.state.entities[id] = {
-                id,
-                playerId,
-                type: buildingType,
-                position,
-                hp: BUILDING_STATS[buildingType as BuildingType].hp,
-                maxHp: BUILDING_STATS[buildingType as BuildingType].hp,
-                state: 'idle'
-            };
+            builder.state = 'building';
+            builder.targetPosition = position;
+            builder.buildType = buildingType as BuildingType;
         }
     }
     if (action.type === 'action_train') {
