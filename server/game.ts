@@ -291,7 +291,7 @@ export class Game {
                     id,
                     playerId,
                     type: unitType,
-                    position: { x: building.position.x + 20, y: building.position.y + 20 },
+                    position: { x: building.position.x + 80, y: building.position.y + 80 },
                     hp: UNIT_STATS[unitType as UnitType].hp,
                     maxHp: UNIT_STATS[unitType as UnitType].hp,
                     state: 'idle'
