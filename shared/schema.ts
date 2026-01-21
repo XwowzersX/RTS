@@ -11,19 +11,32 @@ export type ResourceType = 'wood' | 'stone' | 'iron' | 'ladders';
 export type UnitType = 'lumberjack' | 'miner' | 'knight' | 'archer' | 'builder';
 export type BuildingType = 'hub' | 'barracks' | 'iron_works' | 'factory' | 'wall';
 
-export const COSTS: Record<UnitType | BuildingType, Partial<Record<ResourceType, number>>> = {
+export const COSTS: Record<UnitType | BuildingType | 'iron_ingot' | 'ladder', Partial<Record<ResourceType, number>>> = {
   // Units
   lumberjack: { wood: 3, stone: 5 },
   miner: { wood: 5, stone: 2 },
-  knight: { wood: 2, stone: 3, iron: 1 },
-  archer: { wood: 5, stone: 5, iron: 1 },
+  knight: { wood: 2, stone: 3, iron: 5 },
+  archer: { wood: 5, stone: 5, iron: 5 },
   builder: { wood: 5, stone: 5 },
   // Buildings
   hub: { wood: 0, stone: 0 },
-  barracks: { wood: 3, stone: 5 },
-  iron_works: { wood: 10, stone: 7 },
-  factory: { wood: 5, stone: 5 },
-  wall: { wood: 2, stone: 2 },
+  barracks: { wood: 10, stone: 15 },
+  iron_works: { wood: 15, stone: 10 },
+  factory: { wood: 10, stone: 10 },
+  wall: { wood: 5, stone: 5 },
+  // Production
+  iron_ingot: { iron: 5 },
+  ladder: { wood: 5 },
+};
+
+export const PRODUCTION_TIME: Record<string, number> = {
+  iron_ingot: 5000,
+  ladder: 5000,
+  knight: 10000,
+  archer: 10000,
+  miner: 3000,
+  lumberjack: 3000,
+  builder: 5000,
 };
 
 export const UNIT_STATS: Record<UnitType, { hp: number, attack: number, speed: number, range: number }> = {
@@ -56,11 +69,14 @@ export interface Entity {
   position: Position;
   hp: number;
   maxHp: number;
-  state: 'idle' | 'moving' | 'attacking' | 'gathering' | 'returning' | 'building';
-  targetId?: string; // Attack target or resource target
-  targetPosition?: Position; // For construction
+  state: 'idle' | 'moving' | 'attacking' | 'gathering' | 'returning' | 'building' | 'producing';
+  targetId?: string; 
+  targetPosition?: Position;
   buildProgress?: number;
   buildType?: BuildingType;
+  productionQueue?: (UnitType | 'iron_ingot' | 'ladder')[];
+  productionTimer?: number;
+  isClimbing?: boolean;
 }
 
 export interface PlayerState {

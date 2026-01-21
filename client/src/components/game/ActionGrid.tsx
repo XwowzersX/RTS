@@ -1,16 +1,16 @@
-import { BuildingType, UnitType, COSTS } from "@shared/schema";
+import { BuildingType, UnitType, COSTS, type Entity } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { 
   Sword, Shield, Pickaxe, User, 
   Home, Factory, Hammer, Gavel, ArrowUp,
-  MousePointer2
+  MousePointer2, Box, ChevronUp
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ActionGridProps {
   selection: string[];
-  entityType?: BuildingType | UnitType;
-  onTrain: (type: UnitType) => void;
+  gameState: any;
+  onTrain: (type: any) => void;
   onBuild: (type: BuildingType) => void;
   onStop: () => void;
   isPlacementActive: boolean;
@@ -18,7 +18,7 @@ interface ActionGridProps {
 
 export function ActionGrid({ 
   selection, 
-  entityType, 
+  gameState, 
   onTrain, 
   onBuild,
   onStop,
@@ -35,6 +35,10 @@ export function ActionGrid({
       </div>
     );
   }
+
+  const entityId = selection[0];
+  const entity = gameState.entities[entityId] as Entity;
+  const entityType = entity?.type;
 
   // Render buttons based on selection type
   const renderActions = () => {
@@ -108,26 +112,47 @@ export function ActionGrid({
       );
     }
 
-    // Factories/Works menus
-    if (entityType === 'iron_works' || entityType === 'factory') {
-        return (
-            <div className="col-span-4 text-center text-muted-foreground text-sm py-8 italic">
-              Advanced tech researched...
-            </div>
-        );
+    // Barracks trains military
+    if (entityType === 'barracks') {
+      return (
+        <>
+          <ActionButton 
+            icon={Sword} 
+            label="Knight" 
+            cost={COSTS.knight}
+            onClick={() => onTrain('knight')} 
+          />
+          <ActionButton 
+            icon={Sword} 
+            label="Archer" 
+            cost={COSTS.archer}
+            onClick={() => onTrain('archer')} 
+          />
+        </>
+      );
     }
 
-    // Workers no longer build
-    if (entityType === 'lumberjack' || entityType === 'miner') {
+    // Iron Works produces iron ingots
+    if (entityType === 'iron_works') {
       return (
-        <Button 
-            variant="destructive" 
-            className="col-span-4 h-16 flex flex-col gap-1 border-2 border-red-900/50 hover:border-red-500/50"
-            onClick={onStop}
-        >
-            <MousePointer2 className="w-5 h-5" />
-            <span className="text-xs uppercase tracking-wider">Stop</span>
-        </Button>
+        <ActionButton 
+          icon={Box} 
+          label="Iron Ingot" 
+          cost={COSTS.iron_ingot}
+          onClick={() => onTrain('iron_ingot')} 
+        />
+      );
+    }
+
+    // Factory produces ladders
+    if (entityType === 'factory') {
+      return (
+        <ActionButton 
+          icon={ChevronUp} 
+          label="Ladder" 
+          cost={COSTS.ladder}
+          onClick={() => onTrain('ladder')} 
+        />
       );
     }
 
@@ -145,8 +170,20 @@ export function ActionGrid({
   };
 
   return (
-    <div className="grid grid-cols-4 gap-2 w-full max-w-md">
-      {renderActions()}
+    <div className="flex flex-col gap-2 p-2">
+      <div className="flex items-center justify-between px-1">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+          {entityType} Status
+        </span>
+        {entity?.productionTimer !== undefined && (
+          <span className="text-[10px] font-bold text-primary animate-pulse">
+            PRODUCING ({Math.ceil(entity.productionTimer / 1000)}s)
+          </span>
+        )}
+      </div>
+      <div className="grid grid-cols-4 gap-2 w-full max-w-md">
+        {renderActions()}
+      </div>
     </div>
   );
 }

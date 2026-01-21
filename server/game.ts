@@ -1,4 +1,4 @@
-import { UNIT_STATS, BUILDING_STATS, COSTS, MAP_WIDTH, MAP_HEIGHT, type GameState, type PlayerState, type Entity, type Position, type UnitType, type BuildingType, type ResourceType } from "@shared/schema";
+import { PRODUCTION_TIME, UNIT_STATS, BUILDING_STATS, COSTS, MAP_WIDTH, MAP_HEIGHT, type GameState, type PlayerState, type Entity, type Position, type UnitType, type BuildingType, type ResourceType } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export class Game {
@@ -47,7 +47,7 @@ export class Game {
     this.state.players[playerId] = {
       id: playerId,
       color,
-      resources: { wood: 50, stone: 50, iron: 0, ladders: 0 },
+      resources: { wood: 5, stone: 5, iron: 0, ladders: 0 },
       population: 0
     };
 
@@ -141,14 +141,10 @@ export class Game {
     
     // Very basic gathering logic simulation
     if (entity.state === 'gathering' && entity.targetId) {
-      // Logic to move to resource, collect, return to hub
-      // For MVP, simple resource tick if close enough
       const resource = this.state.resources.find(r => r.id === entity.targetId);
       if (resource) {
         const dist = this.distance(entity.position, resource.position);
         if (dist < 30) {
-           // Gather
-           // Wait, needs a return trip. State machine: 'gathering' -> 'returning'
            entity.state = 'returning';
         } else {
           this.moveTowards(entity, resource.position);
@@ -159,15 +155,13 @@ export class Game {
     }
 
     if (entity.state === 'returning') {
-      // Find nearest hub
       const hub = Object.values(this.state.entities).find(e => e.type === 'hub' && e.playerId === entity.playerId);
       if (hub) {
         const dist = this.distance(entity.position, hub.position);
         if (dist < 50) {
-          // Deposit
           const type = entity.type === 'lumberjack' ? 'wood' : 'stone';
-          this.state.players[entity.playerId].resources[type] += 10;
-          entity.state = 'gathering'; // Go back
+          this.state.players[entity.playerId].resources[type] += 1;
+          entity.state = 'gathering'; 
         } else {
           this.moveTowards(entity, hub.position);
         }
@@ -181,15 +175,68 @@ export class Game {
         const stats = UNIT_STATS[entity.type as UnitType];
         if (stats) {
           const dist = this.distance(entity.position, target.position);
-          if (dist <= stats.range + 10) { // Small buffer
-             target.hp -= stats.attack * 0.2; // Increase DPS
+          
+          // Ladder climbing mechanic
+          if (target.type === 'wall' && this.state.players[entity.playerId].resources.ladders > 0 && !entity.isClimbing) {
+            if (dist < 40) {
+              this.state.players[entity.playerId].resources.ladders -= 1;
+              entity.isClimbing = true;
+            }
+          }
+
+          if (dist <= stats.range + 10) { 
+             if (entity.isClimbing && target.type === 'wall') {
+                this.moveTowards(entity, (entity as any).destination || { x: target.position.x + 40, y: target.position.y + 40 });
+             } else {
+                target.hp -= stats.attack * 0.2; 
+             }
           } else {
              this.moveTowards(entity, target.position);
           }
         }
       } else {
         entity.state = 'idle';
+        entity.isClimbing = false;
       }
+    }
+
+    // Production logic
+    if (entity.state === 'producing' || (entity.productionQueue && entity.productionQueue.length > 0)) {
+        const item = entity.productionQueue![0];
+        const prodTime = PRODUCTION_TIME[item] || 5000;
+        if (!entity.productionTimer) {
+            entity.productionTimer = prodTime;
+            entity.state = 'producing';
+        }
+
+        entity.productionTimer -= 100; // 10 TPS = 100ms per tick
+
+        if (entity.productionTimer <= 0) {
+            const item = entity.productionQueue!.shift();
+            entity.productionTimer = undefined;
+            
+            if (item === 'iron_ingot') {
+                this.state.players[entity.playerId].resources.iron += 1;
+            } else if (item === 'ladder') {
+                this.state.players[entity.playerId].resources.ladders += 1;
+            } else if (item) {
+                // Train unit
+                const id = randomUUID();
+                this.state.entities[id] = {
+                    id,
+                    playerId: entity.playerId,
+                    type: item as UnitType,
+                    position: { x: entity.position.x + 80, y: entity.position.y + 80 },
+                    hp: UNIT_STATS[item as UnitType].hp,
+                    maxHp: UNIT_STATS[item as UnitType].hp,
+                    state: 'idle'
+                };
+            }
+
+            if (entity.productionQueue!.length === 0) {
+                entity.state = 'idle';
+            }
+        }
     }
 
     // General Moving (Action Move)
@@ -293,7 +340,7 @@ export class Game {
         const { buildingId, unitType } = action.payload;
         const building = this.state.entities[buildingId];
         if (building && building.playerId === playerId) {
-             const cost = COSTS[unitType as UnitType];
+             const cost = COSTS[unitType as keyof typeof COSTS];
              const player = this.state.players[playerId];
              
              let canAfford = true;
@@ -306,16 +353,8 @@ export class Game {
                 if (cost.stone) player.resources.stone -= cost.stone;
                 if (cost.iron) player.resources.iron -= cost.iron;
 
-                const id = randomUUID();
-                this.state.entities[id] = {
-                    id,
-                    playerId,
-                    type: unitType,
-                    position: { x: building.position.x + 80, y: building.position.y + 80 },
-                    hp: UNIT_STATS[unitType as UnitType].hp,
-                    maxHp: UNIT_STATS[unitType as UnitType].hp,
-                    state: 'idle'
-                };
+                if (!building.productionQueue) building.productionQueue = [];
+                building.productionQueue.push(unitType);
              }
         }
     }

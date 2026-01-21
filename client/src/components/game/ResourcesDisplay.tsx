@@ -1,5 +1,5 @@
 import { PlayerState, ResourceType } from "@shared/schema";
-import { Trees, Box, Hammer, Pickaxe, Anchor } from "lucide-react";
+import { Trees, Box, Hammer, Pickaxe, ChevronUp } from "lucide-react";
 
 interface ResourcesDisplayProps {
   playerState?: PlayerState;
@@ -13,7 +13,7 @@ export function ResourcesDisplay({ playerState, className }: ResourcesDisplayPro
     { type: 'wood', icon: Trees, color: 'text-emerald-400', label: 'Wood' },
     { type: 'stone', icon: Box, color: 'text-stone-400', label: 'Stone' },
     { type: 'iron', icon: Pickaxe, color: 'text-blue-300', label: 'Iron' },
-    { type: 'ladders', icon: Anchor, color: 'text-amber-600', label: 'Ladders' }, // Using Anchor as ladder proxy
+    { type: 'ladders', icon: ChevronUp, color: 'text-amber-600', label: 'Ladders' },
   ] as const;
 
   return (

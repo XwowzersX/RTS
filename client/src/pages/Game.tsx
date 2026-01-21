@@ -226,14 +226,14 @@ export default function Game() {
 
         {/* Action Grid */}
         <div className="pointer-events-auto bg-black/80 p-2 rounded-xl border border-white/10 backdrop-blur-md shadow-2xl">
-           <ActionGrid 
-             selection={selection}
-             entityType={selectedEntity?.type as BuildingType}
-             onTrain={(type) => actions.trainUnit(selection[0], type)}
-             onBuild={(type) => setPlacementMode(type)}
-             onStop={() => {}} // TODO: Add stop action
-             isPlacementActive={!!placementMode}
-           />
+          <ActionGrid 
+            selection={selection}
+            gameState={gameState}
+            onTrain={(type) => actions.trainUnit(selection[0], type)}
+            onBuild={setPlacementMode}
+            onStop={() => {}}
+            isPlacementActive={!!placementMode}
+          />
         </div>
 
       </div>
