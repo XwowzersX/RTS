@@ -11,7 +11,7 @@ import { Loader2, Copy, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
-import { BuildingType } from "@shared/schema";
+import { BuildingType, WS_MESSAGES } from "@shared/schema";
 
 export default function Game() {
   const [match, params] = useRoute("/game/:id");
@@ -169,6 +169,7 @@ export default function Game() {
           if (type === 'move' && pos) actions.moveUnits(pos);
           if (type === 'attack' && targetId) actions.attackEntity(targetId);
           if (type === 'gather' && targetId) actions.gatherResource(targetId);
+          if (type === 'mine_click' && targetId) sendMessage(WS_MESSAGES.ACTION_MINE_CLICK, { resourceId: targetId });
         }}
         placementMode={placementMode}
         onBuild={actions.buildStructure}

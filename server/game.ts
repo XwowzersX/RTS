@@ -358,5 +358,15 @@ export class Game {
              }
         }
     }
+    if (action.type === 'action_mine_click') {
+        const { resourceId } = action.payload;
+        const resource = this.state.resources.find(r => r.id === resourceId);
+        if (resource && resource.amount > 0) {
+            resource.amount -= 1;
+            const player = this.state.players[playerId];
+            if (resource.type === 'tree') player.resources.wood += 1;
+            else if (resource.type === 'rock') player.resources.stone += 1;
+        }
+    }
   }
 }

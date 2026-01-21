@@ -105,6 +105,7 @@ export const WS_MESSAGES = {
   ACTION_GATHER: 'action_gather',
   ACTION_BUILD: 'action_build',
   ACTION_TRAIN: 'action_train',
+  ACTION_MINE_CLICK: 'action_mine_click',
 } as const;
 
 export type WsMessage = 
@@ -113,7 +114,8 @@ export type WsMessage =
   | { type: typeof WS_MESSAGES.ACTION_ATTACK, payload: { entityIds: string[], targetEntityId: string } }
   | { type: typeof WS_MESSAGES.ACTION_GATHER, payload: { entityIds: string[], resourceId: string } }
   | { type: typeof WS_MESSAGES.ACTION_BUILD, payload: { buildingType: BuildingType, position: Position, builderId?: string } }
-  | { type: typeof WS_MESSAGES.ACTION_TRAIN, payload: { buildingId: string, unitType: UnitType } };
+  | { type: typeof WS_MESSAGES.ACTION_TRAIN, payload: { buildingId: string, unitType: UnitType } }
+  | { type: typeof WS_MESSAGES.ACTION_MINE_CLICK, payload: { resourceId: string } };
 
 // --- DB Schema ---
 export const users = pgTable("users", {

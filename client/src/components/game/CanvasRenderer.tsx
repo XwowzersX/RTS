@@ -7,7 +7,7 @@ interface CanvasRendererProps {
   playerId: string | null;
   selection: string[];
   onSelectionChange: (ids: string[]) => void;
-  onAction: (type: 'move' | 'attack' | 'gather', targetId?: string, position?: Position) => void;
+  onAction: (type: 'move' | 'attack' | 'gather' | 'mine_click', targetId?: string, position?: Position) => void;
   placementMode: BuildingType | null;
   onBuild: (pos: Position) => void;
 }
@@ -234,6 +234,38 @@ export function CanvasRenderer({
   // Event Handlers
   const handleMouseDown = (e: React.MouseEvent) => {
     // 0 = Left Click, 2 = Right Click
+    if (e.button === 0 && !e.altKey) { // Left Click (Normal)
+      if (placementMode) {
+        const worldPos = screenToWorld(e.clientX, e.clientY);
+        onBuild(worldPos);
+        return;
+      }
+
+      const worldPos = screenToWorld(e.clientX, e.clientY);
+      
+      // Check if clicked a resource for direct mining
+      const clickedResource = gameState?.resources.find(res => {
+        const dist = Math.sqrt(Math.pow(res.position.x - worldPos.x, 2) + Math.pow(res.position.y - worldPos.y, 2));
+        return dist < 30;
+      });
+
+      if (clickedResource) {
+        onAction('mine_click', clickedResource.id);
+        setSelectionBox(null);
+        setDragStart(null);
+        return;
+      }
+
+      // Start drag select or pan
+      setDragStart({ x: e.clientX, y: e.clientY });
+      
+      setSelectionBox({ 
+        start: { x: e.clientX, y: e.clientY }, 
+        current: { x: e.clientX, y: e.clientY } 
+      });
+      return;
+    }
+
     if (e.button === 2) { // Right Click = Action
       e.preventDefault();
       if (!gameState) return;
