@@ -43,7 +43,8 @@ export default function Game() {
     setPlacementMode 
   } = useGameControls({ 
     sendMessage, 
-    playerId: joinMutation.data?.playerId ?? null 
+    playerId: joinMutation.data?.playerId ?? null,
+    gameState
   });
 
   // Initial Join

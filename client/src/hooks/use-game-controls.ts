@@ -1,13 +1,14 @@
 import { useState, useCallback } from 'react';
-import type { Position, BuildingType, UnitType } from '@shared/schema';
+import type { Position, BuildingType, UnitType, GameState } from '@shared/schema';
 import { WS_MESSAGES } from '@shared/schema';
 
 interface UseGameControlsProps {
   sendMessage: (type: string, payload: any) => void;
   playerId: string | null;
+  gameState: GameState | null;
 }
 
-export function useGameControls({ sendMessage, playerId }: UseGameControlsProps) {
+export function useGameControls({ sendMessage, playerId, gameState }: UseGameControlsProps) {
   const [selection, setSelection] = useState<string[]>([]);
   const [placementMode, setPlacementMode] = useState<BuildingType | null>(null);
 
