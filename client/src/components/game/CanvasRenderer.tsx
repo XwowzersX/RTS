@@ -24,6 +24,23 @@ export function CanvasRenderer({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [offset, setOffset] = useState<Position>({ x: 0, y: 0 });
+  const [hasCentered, setHasCentered] = useState(false);
+
+  // Initial Camera Centering
+  useEffect(() => {
+    if (!hasCentered && gameState && playerId) {
+      const player = gameState.players[playerId];
+      if (player) {
+        const startX = player.color === 'blue' ? 0 : MAP_WIDTH - window.innerWidth;
+        const startY = player.color === 'blue' ? 0 : MAP_HEIGHT - window.innerHeight;
+        setOffset({ 
+          x: Math.max(0, Math.min(MAP_WIDTH - window.innerWidth, startX)), 
+          y: Math.max(0, Math.min(MAP_HEIGHT - window.innerHeight, startY)) 
+        });
+        setHasCentered(true);
+      }
+    }
+  }, [gameState, playerId, hasCentered]);
   const [dragStart, setDragStart] = useState<Position | null>(null);
   const [isPanning, setIsPanning] = useState(false);
   const [selectionBox, setSelectionBox] = useState<{ start: Position, current: Position } | null>(null);

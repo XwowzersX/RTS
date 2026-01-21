@@ -119,6 +119,42 @@ export default function Game() {
     );
   }
 
+  if (gameState?.status === 'waiting') {
+    return (
+      <div className="h-screen w-screen bg-black flex flex-col items-center justify-center text-white p-6">
+        <div className="max-w-md w-full text-center space-y-8 animate-in zoom-in duration-500">
+          <div className="relative inline-block">
+            <div className="absolute -inset-1 bg-primary/20 blur-xl rounded-full animate-pulse" />
+            <Loader2 className="w-16 h-16 animate-spin text-primary relative" />
+          </div>
+          
+          <div className="space-y-2">
+            <h1 className="text-4xl font-black font-cinzel tracking-tighter">WAITING FOR OPPONENT</h1>
+            <p className="text-muted-foreground">The battle begins once a second commander joins.</p>
+          </div>
+
+          <Card className="bg-white/5 border-white/10 p-6 backdrop-blur-sm">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-3 bg-black/40 rounded-lg border border-white/5">
+                <span className="text-xs uppercase tracking-widest text-muted-foreground">Match Code</span>
+                <span className="font-mono text-xl font-bold text-primary">{gameId}</span>
+              </div>
+              
+              <Button onClick={copyInviteLink} className="w-full h-12 text-lg font-bold hover-elevate">
+                <Copy className="w-5 h-5 mr-2" />
+                Copy Battle Link
+              </Button>
+            </div>
+          </Card>
+
+          <p className="text-xs text-white/20 uppercase tracking-widest">
+            Protocol: 1v1 RTS Real-Time Synchronization
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-black select-none">
       

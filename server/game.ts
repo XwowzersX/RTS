@@ -75,6 +75,11 @@ export class Game {
       state: 'idle'
     };
 
+    // Auto-start if 2 players
+    if (Object.keys(this.state.players).length === 2 && this.state.status === 'waiting') {
+      this.start();
+    }
+
     return playerId;
   }
 

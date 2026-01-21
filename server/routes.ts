@@ -29,12 +29,6 @@ export async function registerRoutes(
     const player = game.state.players[playerId];
     console.log(`Player ${playerId} (${player.color}) joined game ${gameId}`);
     
-    // Start game if 2 players
-    if (Object.keys(game.state.players).length === 2) {
-      console.log(`Game ${gameId} starting...`);
-      game.start();
-    }
-
     res.json({ playerId, color: player.color });
   });
 
