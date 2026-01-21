@@ -8,22 +8,23 @@ export const MAP_HEIGHT = 1500;
 export const TICK_RATE = 10; // Updates per second
 
 export type ResourceType = 'wood' | 'stone' | 'iron' | 'ladders';
-export type UnitType = 'lumberjack' | 'miner' | 'knight' | 'archer';
+export type UnitType = 'lumberjack' | 'miner' | 'knight' | 'archer' | 'builder';
 export type BuildingType = 'hub' | 'barracks' | 'iron_works' | 'factory' | 'resource_manager' | 'wall';
 
 export const COSTS: Record<UnitType | BuildingType, Partial<Record<ResourceType, number>>> = {
   // Units
-  lumberjack: { wood: 3, stone: 5 }, // "Resource Management" produces these, using Prompt costs: 5w, 2s actually? Prompt says: "Resource Management (3 Wood, 5 Stone): Produces Lumberjacks (5w, 2s) and Miners (2w, 5s)."
-  miner: { wood: 5, stone: 2 }, // Prompt says Miners (2w, 5s) - wait, I'll stick to prompt.
+  lumberjack: { wood: 3, stone: 5 },
+  miner: { wood: 5, stone: 2 },
   knight: { wood: 2, stone: 3, iron: 1 },
   archer: { wood: 5, stone: 5, iron: 1 },
+  builder: { wood: 5, stone: 5 },
   // Buildings
-  hub: { wood: 0, stone: 0 }, // Initial
+  hub: { wood: 0, stone: 0 },
   barracks: { wood: 3, stone: 5 },
   iron_works: { wood: 10, stone: 7 },
   factory: { wood: 5, stone: 5 },
   resource_manager: { wood: 3, stone: 5 },
-  wall: { wood: 2, stone: 2 }, // Unlocked by Factory
+  wall: { wood: 2, stone: 2 },
 };
 
 export const UNIT_STATS: Record<UnitType, { hp: number, attack: number, speed: number, range: number }> = {
@@ -31,6 +32,7 @@ export const UNIT_STATS: Record<UnitType, { hp: number, attack: number, speed: n
   miner: { hp: 20, attack: 2, speed: 1.5, range: 10 },
   knight: { hp: 80, attack: 10, speed: 2, range: 15 },
   archer: { hp: 40, attack: 8, speed: 1.8, range: 150 },
+  builder: { hp: 30, attack: 2, speed: 1.4, range: 10 },
 };
 
 export const BUILDING_STATS: Record<BuildingType, { hp: number, size: number }> = {

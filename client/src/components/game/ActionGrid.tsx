@@ -38,8 +38,8 @@ export function ActionGrid({
 
   // Render buttons based on selection type
   const renderActions = () => {
-    // Workers can build
-    if (entityType === 'lumberjack' || entityType === 'miner') {
+    // Builders can build everything
+    if (entityType === 'builder') {
       return (
         <>
           <ActionButton 
@@ -77,31 +77,19 @@ export function ActionGrid({
             onClick={() => onBuild('wall')} 
             active={isPlacementActive}
           />
+          <Button 
+            variant="destructive" 
+            className="col-span-2 h-16 flex flex-col gap-1 border-2 border-red-900/50 hover:border-red-500/50"
+            onClick={onStop}
+          >
+            <MousePointer2 className="w-5 h-5" />
+            <span className="text-xs uppercase tracking-wider">Stop</span>
+          </Button>
         </>
       );
     }
 
-    // Barracks train units
-    if (entityType === 'barracks') {
-      return (
-        <>
-          <ActionButton 
-            icon={Sword} 
-            label="Knight" 
-            cost={COSTS.knight}
-            onClick={() => onTrain('knight')} 
-          />
-          <ActionButton 
-            icon={Gavel} 
-            label="Archer" 
-            cost={COSTS.archer}
-            onClick={() => onTrain('archer')} 
-          />
-        </>
-      );
-    }
-
-    // Hub trains workers
+    // Hub trains workers & builder
     if (entityType === 'hub' || entityType === 'resource_manager') {
       return (
         <>
@@ -117,6 +105,35 @@ export function ActionGrid({
             cost={COSTS.lumberjack}
             onClick={() => onTrain('lumberjack')} 
           />
+          <ActionButton 
+            icon={Hammer} 
+            label="Builder" 
+            cost={COSTS.builder}
+            onClick={() => onTrain('builder')} 
+          />
+        </>
+      );
+    }
+
+    // Workers can still build resource hubs for convenience
+    if (entityType === 'lumberjack' || entityType === 'miner') {
+      return (
+        <>
+          <ActionButton 
+            icon={Home} 
+            label="Resource Hub" 
+            cost={COSTS.resource_manager}
+            onClick={() => onBuild('resource_manager')} 
+            active={isPlacementActive}
+          />
+           <Button 
+            variant="destructive" 
+            className="col-span-3 h-16 flex flex-col gap-1 border-2 border-red-900/50 hover:border-red-500/50"
+            onClick={onStop}
+          >
+            <MousePointer2 className="w-5 h-5" />
+            <span className="text-xs uppercase tracking-wider">Stop</span>
+          </Button>
         </>
       );
     }

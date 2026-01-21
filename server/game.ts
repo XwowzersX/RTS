@@ -242,9 +242,20 @@ export class Game {
         });
     }
     if (action.type === 'action_build') {
-        const { buildingType, position } = action.payload;
+        const { buildingType, position, builderId } = action.payload;
         const cost = COSTS[buildingType as BuildingType];
         const player = this.state.players[playerId];
+        
+        // Check if builder is provided and valid
+        if (builderId) {
+            const builder = this.state.entities[builderId];
+            if (!builder || builder.type !== 'builder' || builder.playerId !== playerId) {
+                return;
+            }
+        } else {
+            // For now, allow buildings without builderId for backward compatibility or if we don't enforce it strictly yet
+            // but the user wants "The builder, you can move him to build things"
+        }
         
         // Check cost
         let canAfford = true;

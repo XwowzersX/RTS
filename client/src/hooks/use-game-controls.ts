@@ -37,12 +37,20 @@ export function useGameControls({ sendMessage, playerId }: UseGameControlsProps)
 
   const buildStructure = useCallback((position: Position) => {
     if (!placementMode) return;
+    
+    // Find a builder in the current selection
+    const builderId = selection.find(id => {
+      const e = gameState?.entities?.[id];
+      return e && (e.type === 'builder' || e.type === 'lumberjack' || e.type === 'miner');
+    });
+
     sendMessage(WS_MESSAGES.ACTION_BUILD, {
       buildingType: placementMode,
-      position
+      position,
+      builderId
     });
-    setPlacementMode(null); // Exit placement mode after build command
-  }, [placementMode, sendMessage]);
+    setPlacementMode(null);
+  }, [placementMode, selection, gameState, sendMessage]);
 
   const trainUnit = useCallback((buildingId: string, unitType: UnitType) => {
     sendMessage(WS_MESSAGES.ACTION_TRAIN, {
