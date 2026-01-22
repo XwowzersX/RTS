@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Swords, Users } from "lucide-react";
+import { Swords, Users, BookOpen } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { TutorialModal } from "@/components/game/TutorialModal";
 
 export default function Lobby() {
   const [gameIdInput, setGameIdInput] = useState("");
@@ -52,6 +53,9 @@ export default function Lobby() {
           <p className="text-muted-foreground mt-2 font-rajdhani text-lg uppercase tracking-widest">
             Real-Time Strategy Warfare
           </p>
+          <div className="mt-4">
+            <TutorialModal />
+          </div>
         </div>
 
         <Card className="bg-black/60 backdrop-blur-xl border-white/10 shadow-2xl">
