@@ -205,8 +205,9 @@ export default function Game() {
           {gameState?.startTime && gameState.status === 'playing' && (
             <div className="bg-black/60 border border-white/10 backdrop-blur-md px-4 py-1 rounded-full text-primary font-mono font-bold animate-pulse">
               {(() => {
-                const now = Date.now();
-                const seconds = Math.max(0, Math.floor((now - gameState.startTime) / 1000));
+                // Use a stable reference for current time to avoid drift during render
+                const startTime = gameState.startTime;
+                const seconds = Math.max(0, Math.floor((Date.now() - startTime) / 1000));
                 const mins = Math.floor(seconds / 60);
                 const secs = seconds % 60;
                 return `${mins}:${secs.toString().padStart(2, '0')}`;
