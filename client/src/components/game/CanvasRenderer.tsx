@@ -23,8 +23,10 @@ export function CanvasRenderer({
 }: CanvasRendererProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [offset, setOffset] = useState<Position>({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
+  const [offset, setOffset] = useState<Position>({ x: 0, y: 0 });
+  const [isStrategicView, setIsStrategicView] = useState(false);
+  const [preStrategicState, setPreStrategicState] = useState<{zoom: number, offset: Position} | null>(null);
   const [hasCentered, setHasCentered] = useState(false);
 
   // Initial Camera Centering
@@ -89,6 +91,40 @@ export function CanvasRenderer({
 
     return () => clearInterval(interval);
   }, [mousePos]);
+
+  // Strategic View Toggle
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === 'z' && !isStrategicView) {
+        setPreStrategicState({ zoom, offset });
+        setIsStrategicView(true);
+        
+        // Calculate zoom to fit whole map
+        const zoomX = window.innerWidth / MAP_WIDTH;
+        const zoomY = window.innerHeight / MAP_HEIGHT;
+        const targetZoom = Math.min(zoomX, zoomY) * 0.9;
+        
+        setZoom(targetZoom);
+        setOffset({ x: 0, y: 0 });
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === 'z' && isStrategicView && preStrategicState) {
+        setZoom(preStrategicState.zoom);
+        setOffset(preStrategicState.offset);
+        setIsStrategicView(false);
+        setPreStrategicState(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [isStrategicView, zoom, offset, preStrategicState]);
 
   // Main Render Loop
   useEffect(() => {
