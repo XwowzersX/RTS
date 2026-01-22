@@ -21,9 +21,10 @@ export default function Game() {
 
   const toggleMusic = () => {
     if (!audioRef.current) {
-      audioRef.current = new Audio("https://assets.mixkit.co/active_storage/sfx/123/123-preview.mp3"); // placeholder cinematic music
+      // More intense war-themed cinematic music (Epic Orchestral)
+      audioRef.current = new Audio("https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"); 
       audioRef.current.loop = true;
-      audioRef.current.volume = 0.2;
+      audioRef.current.volume = 0.15;
     }
     
     if (isMusicPlaying) {
