@@ -111,7 +111,8 @@ export default function Lobby() {
       </div>
 
       <div className="absolute bottom-8 text-xs text-white/20 font-mono">
-        v0.1.0-ALPHA • BUILDING & CONQUEST
+        V1.0.1 Sound-N-Systems Update
+        @copyright 2026
       </div>
     </div>
   );

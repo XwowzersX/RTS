@@ -12,8 +12,27 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
 import { BuildingType, WS_MESSAGES } from "@shared/schema";
+import { Music, Music2 } from "lucide-react";
+import { useState, useRef } from "react";
 
 export default function Game() {
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const toggleMusic = () => {
+    if (!audioRef.current) {
+      audioRef.current = new Audio("https://assets.mixkit.co/active_storage/sfx/123/123-preview.mp3"); // placeholder cinematic music
+      audioRef.current.loop = true;
+      audioRef.current.volume = 0.2;
+    }
+    
+    if (isMusicPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play().catch(console.error);
+    }
+    setIsMusicPlaying(!isMusicPlaying);
+  };
   const [match, params] = useRoute("/game/:id");
   const gameId = match ? params.id : null;
   const { toast } = useToast();
@@ -181,16 +200,28 @@ export default function Game() {
         <ResourcesDisplay playerState={myPlayer} className="pointer-events-auto" />
         
         {/* Game ID & Copy (Top Right) */}
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="pointer-events-auto bg-black/60 border-white/10 backdrop-blur-md hover:bg-white/10"
-          onClick={copyInviteLink}
-        >
-          <span className="mr-2 text-xs opacity-50">Match ID:</span>
-          <span className="font-mono">{gameId?.slice(0, 8)}...</span>
-          <Copy className="w-3 h-3 ml-2" />
-        </Button>
+        <div className="flex items-center gap-2 pointer-events-auto">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="bg-black/60 border-white/10 backdrop-blur-md hover:bg-white/10"
+            onClick={toggleMusic}
+          >
+            {isMusicPlaying ? <Music className="w-4 h-4 mr-2" /> : <Music2 className="w-4 h-4 mr-2" />}
+            <span className="text-xs">{isMusicPlaying ? "Music On" : "Music Off"}</span>
+          </Button>
+
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="bg-black/60 border-white/10 backdrop-blur-md hover:bg-white/10"
+            onClick={copyInviteLink}
+          >
+            <span className="mr-2 text-xs opacity-50">Match ID:</span>
+            <span className="font-mono">{gameId?.slice(0, 8)}...</span>
+            <Copy className="w-3 h-3 ml-2" />
+          </Button>
+        </div>
       </div>
 
       {/* Bottom Bar: Controls */}
