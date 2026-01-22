@@ -24,6 +24,7 @@ export function CanvasRenderer({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [offset, setOffset] = useState<Position>({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
   const [hasCentered, setHasCentered] = useState(false);
 
   // Initial Camera Centering
@@ -51,14 +52,14 @@ export function CanvasRenderer({
 
   // Coordinate conversion helpers
   const screenToWorld = useCallback((sx: number, sy: number) => ({
-    x: sx + offset.x,
-    y: sy + offset.y
-  }), [offset]);
+    x: (sx / zoom) + offset.x,
+    y: (sy / zoom) + offset.y
+  }), [offset, zoom]);
 
   const worldToScreen = useCallback((wx: number, wy: number) => ({
-    x: wx - offset.x,
-    y: wy - offset.y
-  }), [offset]);
+    x: (wx - offset.x) * zoom,
+    y: (wy - offset.y) * zoom
+  }), [offset, zoom]);
 
   const [mousePos, setMousePos] = useState<Position>({ x: 0, y: 0 });
 
@@ -109,6 +110,7 @@ export function CanvasRenderer({
 
     // Draw Grid (World Boundaries)
     ctx.save();
+    ctx.scale(zoom, zoom);
     ctx.translate(-offset.x, -offset.y);
     
     // Water/Infinite ground
@@ -324,8 +326,8 @@ export function CanvasRenderer({
   const handleMouseMove = (e: React.MouseEvent) => {
     if (isPanning && dragStart) {
       setOffset(prev => ({
-        x: prev.x - (e.clientX - dragStart.x),
-        y: prev.y - (e.clientY - dragStart.y)
+        x: prev.x - (e.clientX - dragStart.x) / zoom,
+        y: prev.y - (e.clientY - dragStart.y) / zoom
       }));
       setDragStart({ x: e.clientX, y: e.clientY });
     } else if (selectionBox) {
@@ -379,6 +381,21 @@ export function CanvasRenderer({
     }
   };
 
+  const handleWheel = (e: React.WheelEvent) => {
+    const zoomSpeed = 0.001;
+    const minZoom = 0.2;
+    const maxZoom = 2;
+    
+    setZoom(prev => {
+      const newZoom = Math.max(minZoom, Math.min(maxZoom, prev - e.deltaY * zoomSpeed));
+      
+      // Optional: Center zoom on mouse position
+      // This is a bit more complex as it requires adjusting the offset too
+      // For now, simple zoom is fine
+      return newZoom;
+    });
+  };
+
   return (
     <div 
       ref={containerRef} 
@@ -386,6 +403,7 @@ export function CanvasRenderer({
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
+      onWheel={handleWheel}
       onContextMenu={(e) => e.preventDefault()}
     >
       <canvas ref={canvasRef} className="block" />
