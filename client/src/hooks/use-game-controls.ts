@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import type { Position, BuildingType, UnitType, GameState } from '@shared/schema';
 import { WS_MESSAGES } from '@shared/schema';
+import { playSound } from './use-game-socket';
 
 interface UseGameControlsProps {
   sendMessage: (type: string, payload: any) => void;
@@ -18,6 +19,7 @@ export function useGameControls({ sendMessage, playerId, gameState }: UseGameCon
       entityIds: selection,
       target
     });
+    playSound('click');
   }, [selection, sendMessage]);
 
   const attackEntity = useCallback((targetEntityId: string) => {
@@ -26,6 +28,7 @@ export function useGameControls({ sendMessage, playerId, gameState }: UseGameCon
       entityIds: selection,
       targetEntityId
     });
+    playSound('attack');
   }, [selection, sendMessage]);
 
   const gatherResource = useCallback((resourceId: string) => {
@@ -34,6 +37,7 @@ export function useGameControls({ sendMessage, playerId, gameState }: UseGameCon
       entityIds: selection,
       resourceId
     });
+    playSound('gather');
   }, [selection, sendMessage]);
 
   const buildStructure = useCallback((position: Position) => {
@@ -50,14 +54,16 @@ export function useGameControls({ sendMessage, playerId, gameState }: UseGameCon
       position,
       builderId
     });
+    playSound('build');
     setPlacementMode(null);
   }, [placementMode, selection, gameState, sendMessage]);
 
-  const trainUnit = useCallback((buildingId: string, unitType: UnitType) => {
+  const trainUnit = useCallback((buildingId: string, unitType: UnitType | 'iron_ingot' | 'ladder') => {
     sendMessage(WS_MESSAGES.ACTION_TRAIN, {
       buildingId,
       unitType
     });
+    playSound('train');
   }, [sendMessage]);
 
   return {

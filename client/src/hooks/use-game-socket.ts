@@ -81,3 +81,18 @@ export function useGameSocket(gameId: string | null) {
 
   return { socket, gameState, isConnected, sendMessage };
 }
+
+// Global sound helper
+export const playSound = (type: 'build' | 'train' | 'attack' | 'gather' | 'click') => {
+  const sounds: Record<string, string> = {
+    build: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3',
+    train: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3',
+    attack: 'https://assets.mixkit.co/active_storage/sfx/2747/2747-preview.mp3',
+    gather: 'https://assets.mixkit.co/active_storage/sfx/2544/2544-preview.mp3',
+    click: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3'
+  };
+  
+  const audio = new Audio(sounds[type]);
+  audio.volume = 0.3;
+  audio.play().catch(() => {}); // Browser might block auto-play
+};

@@ -178,21 +178,55 @@ export function CanvasRenderer({
 
     // 2. Resources
     gameState.resources.forEach(res => {
-      ctx.fillStyle = res.type === 'tree' ? '#10b981' : '#78716c';
-      // Simple visual representation
-      ctx.beginPath();
+      ctx.save();
+      ctx.translate(res.position.x, res.position.y);
+      
       if (res.type === 'tree') {
-        ctx.arc(res.position.x, res.position.y, 15, 0, Math.PI * 2);
+        // Stylized Tree
+        ctx.fillStyle = '#065f46'; // Darker forest green
+        ctx.beginPath();
+        ctx.moveTo(0, -20);
+        ctx.lineTo(15, 10);
+        ctx.lineTo(-15, 10);
+        ctx.closePath();
+        ctx.fill();
+        
+        ctx.fillStyle = '#059669'; // Lighter green layer
+        ctx.beginPath();
+        ctx.moveTo(0, -10);
+        ctx.lineTo(10, 15);
+        ctx.lineTo(-10, 15);
+        ctx.closePath();
+        ctx.fill();
+        
+        ctx.fillStyle = '#78350f'; // Trunk
+        ctx.fillRect(-3, 15, 6, 8);
       } else {
-        ctx.fillRect(res.position.x - 12, res.position.y - 12, 24, 24);
+        // Stylized Rock/Ore
+        ctx.fillStyle = '#4b5563';
+        ctx.beginPath();
+        ctx.moveTo(-12, 10);
+        ctx.lineTo(0, -15);
+        ctx.lineTo(12, 10);
+        ctx.closePath();
+        ctx.fill();
+        
+        ctx.fillStyle = '#9ca3af'; // Highlight
+        ctx.beginPath();
+        ctx.moveTo(-8, 8);
+        ctx.lineTo(0, -10);
+        ctx.lineTo(5, 8);
+        ctx.closePath();
+        ctx.fill();
       }
-      ctx.fill();
       
       // Amount text
       ctx.fillStyle = '#ffffff80';
-      ctx.font = '10px monospace';
+      ctx.font = 'bold 9px Rajdhani';
       ctx.textAlign = 'center';
-      ctx.fillText(res.amount.toString(), res.position.x, res.position.y + 25);
+      ctx.fillText(res.amount.toString(), 0, 30);
+      
+      ctx.restore();
     });
 
     // 3. Entities (Units & Buildings)
@@ -207,46 +241,91 @@ export function CanvasRenderer({
 
       // Selection Ring
       if (isSelected) {
-        ctx.strokeStyle = '#22c55e'; // Green selection
+        ctx.strokeStyle = '#22c55e'; 
         ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
         ctx.beginPath();
         const radius = BUILDING_STATS[entity.type as BuildingType]?.size || ENTITY_RADIUS;
-        ctx.arc(0, 0, radius + 5, 0, Math.PI * 2);
+        ctx.arc(0, 0, radius + 8, 0, Math.PI * 2);
         ctx.stroke();
+        ctx.setLineDash([]);
       }
 
       // Draw Entity Body
       ctx.fillStyle = color;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = 'rgba(0,0,0,0.5)';
+      
       if (['hub', 'barracks', 'iron_works', 'factory', 'resource_manager', 'wall'].includes(entity.type)) {
         const size = BUILDING_STATS[entity.type as BuildingType].size;
+        
+        // Base structure
+        ctx.fillStyle = '#2c3e50';
         ctx.fillRect(-size/2, -size/2, size, size);
         
-        // Structure label
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 12px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(entity.type.substring(0, 1).toUpperCase(), 0, 0);
-      } else {
-        // Unit
+        // Roof/Detail
+        ctx.fillStyle = color;
         ctx.beginPath();
-        ctx.arc(0, 0, ENTITY_RADIUS, 0, Math.PI * 2);
+        ctx.moveTo(-size/2, -size/2);
+        ctx.lineTo(0, -size/1.5);
+        ctx.lineTo(size/2, -size/2);
+        ctx.closePath();
         ctx.fill();
 
-        // Unit Type Indicator
-        ctx.fillStyle = '#00000050';
-        ctx.font = '10px sans-serif';
+        // Architectural details (windows/doors)
+        ctx.fillStyle = '#f1c40f';
+        ctx.fillRect(-size/4, size/4, size/8, size/8);
+        ctx.fillRect(size/8, size/4, size/8, size/8);
+        
+        // Label
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 10px Rajdhani';
+        ctx.textAlign = 'center';
+        ctx.fillText(entity.type.replace('_', ' ').toUpperCase(), 0, size/2 + 15);
+      } else {
+        // Unit Styling
+        ctx.beginPath();
+        if (entity.type === 'knight') {
+            // Knight - shield shape
+            ctx.moveTo(0, -ENTITY_RADIUS);
+            ctx.lineTo(ENTITY_RADIUS, 0);
+            ctx.lineTo(0, ENTITY_RADIUS);
+            ctx.lineTo(-ENTITY_RADIUS, 0);
+            ctx.closePath();
+        } else if (entity.type === 'archer') {
+            // Archer - triangular
+            ctx.moveTo(0, -ENTITY_RADIUS);
+            ctx.lineTo(ENTITY_RADIUS, ENTITY_RADIUS);
+            ctx.lineTo(-ENTITY_RADIUS, ENTITY_RADIUS);
+            ctx.closePath();
+        } else {
+            // Worker - circle
+            ctx.arc(0, 0, ENTITY_RADIUS, 0, Math.PI * 2);
+        }
+        ctx.fill();
+        
+        // Unit border
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Unit Type Icon/Letter
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 12px Rajdhani';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(entity.type[0].toUpperCase(), 0, 0);
       }
+      
+      ctx.shadowBlur = 0;
 
       // Health Bar
       const hpPct = entity.hp / entity.maxHp;
+      const size = BUILDING_STATS[entity.type as BuildingType]?.size;
       ctx.fillStyle = '#ef4444';
-      ctx.fillRect(-15, -25, 30, 4);
+      ctx.fillRect(-20, -size/2 - 10 || -30, 40, 4);
       ctx.fillStyle = '#22c55e';
-      ctx.fillRect(-15, -25, 30 * hpPct, 4);
+      ctx.fillRect(-20, -size/2 - 10 || -30, 40 * hpPct, 4);
 
       ctx.restore();
     });
