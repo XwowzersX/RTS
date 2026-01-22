@@ -169,7 +169,6 @@ export default function Game() {
           if (type === 'move' && pos) actions.moveUnits(pos);
           if (type === 'attack' && targetId) actions.attackEntity(targetId);
           if (type === 'gather' && targetId) actions.gatherResource(targetId);
-          if (type === 'mine_click' && targetId) sendMessage(WS_MESSAGES.ACTION_MINE_CLICK, { resourceId: targetId });
         }}
         placementMode={placementMode}
         onBuild={actions.buildStructure}

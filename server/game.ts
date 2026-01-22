@@ -185,6 +185,15 @@ export class Game {
             if (dist < 40) {
               this.state.players[entity.playerId].resources.ladders -= 1;
               entity.isClimbing = true;
+              (entity as any).climbTimer = 10000; // 10 seconds
+            }
+          }
+
+          if (entity.isClimbing) {
+            (entity as any).climbTimer = ((entity as any).climbTimer || 0) - 100;
+            if ((entity as any).climbTimer <= 0) {
+              entity.isClimbing = false;
+              delete (entity as any).climbTimer;
             }
           }
 
@@ -387,16 +396,6 @@ export class Game {
                 if (!building.productionQueue) building.productionQueue = [];
                 building.productionQueue.push(unitType);
              }
-        }
-    }
-    if (action.type === 'action_mine_click') {
-        const { resourceId } = action.payload;
-        const resource = this.state.resources.find(r => r.id === resourceId);
-        if (resource && resource.amount > 0) {
-            resource.amount -= 1;
-            const player = this.state.players[playerId];
-            if (resource.type === 'tree') player.resources.wood += 1;
-            else if (resource.type === 'rock') player.resources.stone += 1;
         }
     }
   }
