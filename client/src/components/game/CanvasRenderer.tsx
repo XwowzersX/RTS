@@ -28,6 +28,21 @@ export function CanvasRenderer({
   const [isStrategicView, setIsStrategicView] = useState(false);
   const [preStrategicState, setPreStrategicState] = useState<{zoom: number, offset: Position} | null>(null);
   const [hasCentered, setHasCentered] = useState(false);
+  const [screenShake, setScreenShake] = useState(0);
+
+  // Screen Shake trigger
+  useEffect(() => {
+    if (!gameState) return;
+    
+    // Check if any entity's HP changed significantly or an entity died
+    // For MVP, we'll just check if any entity is in 'attacking' state
+    const isCombatActive = Object.values(gameState.entities).some(e => e.state === 'attacking');
+    if (isCombatActive) {
+      setScreenShake(prev => Math.min(prev + 0.5, 3));
+    } else {
+      setScreenShake(prev => Math.max(0, prev - 0.2));
+    }
+  }, [gameState]);
 
   // Initial Camera Centering
   useEffect(() => {
@@ -64,6 +79,31 @@ export function CanvasRenderer({
   }), [offset, zoom]);
 
   const [mousePos, setMousePos] = useState<Position>({ x: 0, y: 0 });
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+
+  // Hover detection
+  useEffect(() => {
+    if (!gameState) return;
+    const worldPos = screenToWorld(mousePos.x, mousePos.y);
+    
+    // Check entities
+    const entity = Object.values(gameState.entities).find(ent => {
+      const size = BUILDING_STATS[ent.type as BuildingType]?.size || ENTITY_RADIUS * 2;
+      return Math.hypot(ent.position.x - worldPos.x, ent.position.y - worldPos.y) < size/2;
+    });
+    
+    if (entity) {
+      setHoveredId(entity.id);
+      return;
+    }
+    
+    // Check resources
+    const resource = gameState.resources.find(res => 
+      Math.hypot(res.position.x - worldPos.x, res.position.y - worldPos.y) < 20
+    );
+    
+    setHoveredId(resource ? resource.id : null);
+  }, [mousePos, gameState, screenToWorld]);
 
   // Edge Scroll Effect
   useEffect(() => {
@@ -146,6 +186,14 @@ export function CanvasRenderer({
 
     // Draw Grid (World Boundaries)
     ctx.save();
+    
+    // Apply Screen Shake
+    if (screenShake > 0) {
+      const sx = (Math.random() - 0.5) * screenShake;
+      const sy = (Math.random() - 0.5) * screenShake;
+      ctx.translate(sx, sy);
+    }
+
     ctx.scale(zoom, zoom);
     ctx.translate(-offset.x, -offset.y);
     
@@ -183,6 +231,10 @@ export function CanvasRenderer({
       
       if (res.type === 'tree') {
         // Stylized Tree
+        const isHovered = hoveredId === res.id;
+        ctx.shadowBlur = isHovered ? 15 : 0;
+        ctx.shadowColor = '#10b981';
+        
         ctx.fillStyle = '#065f46'; // Darker forest green
         ctx.beginPath();
         ctx.moveTo(0, -20);
@@ -240,9 +292,9 @@ export function CanvasRenderer({
       ctx.translate(entity.position.x, entity.position.y);
 
       // Selection Ring
-      if (isSelected) {
-        ctx.strokeStyle = '#22c55e'; 
-        ctx.lineWidth = 2;
+      if (isSelected || hoveredId === entity.id) {
+        ctx.strokeStyle = isSelected ? '#22c55e' : 'rgba(255,255,255,0.3)'; 
+        ctx.lineWidth = isSelected ? 2 : 1;
         ctx.setLineDash([5, 5]);
         ctx.beginPath();
         const radius = BUILDING_STATS[entity.type as BuildingType]?.size || ENTITY_RADIUS;
