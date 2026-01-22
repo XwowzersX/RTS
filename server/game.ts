@@ -100,6 +100,10 @@ export class Game {
     for (const entityId in this.state.entities) {
       const entity = this.state.entities[entityId];
       if (entity.hp <= 0) {
+        if (entity.type === 'hub') {
+          this.state.winner = Object.keys(this.state.players).find(id => id !== entity.playerId);
+          this.stop();
+        }
         delete this.state.entities[entityId];
         continue;
       }
@@ -259,14 +263,41 @@ export class Game {
   }
 
   private moveTowards(entity: Entity, target: Position) {
-    const speed = (UNIT_STATS[entity.type as UnitType]?.speed || 1) * 3; // Increase speed for responsiveness
+    const speed = (UNIT_STATS[entity.type as UnitType]?.speed || 1) * 3;
     const dx = target.x - entity.position.x;
     const dy = target.y - entity.position.y;
     const dist = Math.sqrt(dx*dx + dy*dy);
     
-    if (dist > 5) { // Stop close enough
-      entity.position.x += (dx / dist) * speed;
-      entity.position.y += (dy / dist) * speed;
+    if (dist > 5) {
+      const nextX = entity.position.x + (dx / dist) * speed;
+      const nextY = entity.position.y + (dy / dist) * speed;
+
+      // Wall collision check
+      let collision = false;
+      if (!entity.isClimbing) {
+        for (const eId in this.state.entities) {
+          const e = this.state.entities[eId];
+          if (e.type === 'wall' && e.hp > 0) {
+            const wallSize = BUILDING_STATS.wall.size;
+            const distToWall = Math.sqrt(Math.pow(e.position.x - nextX, 2) + Math.pow(e.position.y - nextY, 2));
+            if (distToWall < (wallSize / 2 + 10)) {
+              collision = true;
+              break;
+            }
+          }
+        }
+      }
+
+      if (!collision) {
+        entity.position.x = nextX;
+        entity.position.y = nextY;
+      } else {
+        // If it's a worker gathering, they might get stuck, but for now just stop
+        if (entity.state === 'moving') {
+          entity.state = 'idle';
+          delete (entity as any).destination;
+        }
+      }
     } else {
       entity.position.x = target.x;
       entity.position.y = target.y;

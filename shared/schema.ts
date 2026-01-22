@@ -25,7 +25,7 @@ export const COSTS: Record<UnitType | BuildingType | 'iron_ingot' | 'ladder', Pa
   factory: { wood: 10, stone: 10 },
   wall: { wood: 5, stone: 5 },
   // Production
-  iron_ingot: { iron: 5 },
+  iron_ingot: { stone: 5 },
   ladder: { wood: 5 },
 };
 
@@ -52,7 +52,7 @@ export const BUILDING_STATS: Record<BuildingType, { hp: number, size: number }> 
   barracks: { hp: 300, size: 50 },
   iron_works: { hp: 300, size: 50 },
   factory: { hp: 300, size: 50 },
-  wall: { hp: 500, size: 20 },
+  wall: { hp: 500, size: 40 },
 };
 
 // --- Game State Types (Not persisted in DB, but shared) ---
