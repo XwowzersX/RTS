@@ -85,6 +85,7 @@ export class Game {
 
   start() {
     this.state.status = 'playing';
+    this.state.startTime = Date.now();
     this.loopInterval = setInterval(() => this.tick(), 1000 / 10); // 10 TPS
   }
 

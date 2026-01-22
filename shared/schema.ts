@@ -93,6 +93,7 @@ export interface GameState {
   entities: Record<string, Entity>;
   resources: { id: string, type: 'tree' | 'rock', position: Position, amount: number }[];
   winner?: string;
+  startTime?: number;
 }
 
 // --- WebSocket Protocol ---

@@ -201,27 +201,39 @@ export default function Game() {
         <ResourcesDisplay playerState={myPlayer} className="pointer-events-auto" />
         
         {/* Game ID & Copy (Top Right) */}
-        <div className="flex items-center gap-2 pointer-events-auto">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="bg-black/60 border-white/10 backdrop-blur-md hover:bg-white/10"
-            onClick={toggleMusic}
-          >
-            {isMusicPlaying ? <Music className="w-4 h-4 mr-2" /> : <Music2 className="w-4 h-4 mr-2" />}
-            <span className="text-xs">{isMusicPlaying ? "Music On" : "Music Off"}</span>
-          </Button>
+        <div className="flex flex-col items-end gap-2 pointer-events-auto">
+          {gameState?.startTime && gameState.status === 'playing' && (
+            <div className="bg-black/60 border border-white/10 backdrop-blur-md px-4 py-1 rounded-full text-primary font-mono font-bold animate-pulse">
+              {(() => {
+                const seconds = Math.floor((Date.now() - gameState.startTime) / 1000);
+                const mins = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+              })()}
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="bg-black/60 border-white/10 backdrop-blur-md hover:bg-white/10"
+              onClick={toggleMusic}
+            >
+              {isMusicPlaying ? <Music className="w-4 h-4 mr-2" /> : <Music2 className="w-4 h-4 mr-2" />}
+              <span className="text-xs">{isMusicPlaying ? "Music On" : "Music Off"}</span>
+            </Button>
 
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="bg-black/60 border-white/10 backdrop-blur-md hover:bg-white/10"
-            onClick={copyInviteLink}
-          >
-            <span className="mr-2 text-xs opacity-50">Match ID:</span>
-            <span className="font-mono">{gameId?.slice(0, 8)}...</span>
-            <Copy className="w-3 h-3 ml-2" />
-          </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="bg-black/60 border-white/10 backdrop-blur-md hover:bg-white/10"
+              onClick={copyInviteLink}
+            >
+              <span className="mr-2 text-xs opacity-50">Match ID:</span>
+              <span className="font-mono">{gameId?.slice(0, 8)}...</span>
+              <Copy className="w-3 h-3 ml-2" />
+            </Button>
+          </div>
         </div>
       </div>
 
