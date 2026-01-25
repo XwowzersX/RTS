@@ -211,7 +211,7 @@ export function CanvasRenderer({
     ctx.fillRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
 
     // Grid lines
-    ctx.strokeStyle = "#ffffff05";
+    ctx.strokeStyle = "#ffffff08";
     ctx.lineWidth = 1;
     ctx.beginPath();
     for (let x = 0; x <= MAP_WIDTH; x += TILE_SIZE) {
@@ -224,50 +224,84 @@ export function CanvasRenderer({
     }
     ctx.stroke();
 
+    // Decorative ground details (vignette/noise)
+    ctx.fillStyle = "rgba(0,0,0,0.1)";
+    for (let i = 0; i < 50; i++) {
+        const rx = Math.random() * MAP_WIDTH;
+        const ry = Math.random() * MAP_HEIGHT;
+        ctx.beginPath();
+        ctx.arc(rx, ry, 2, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
     // 2. Resources
     gameState.resources.forEach(res => {
       ctx.save();
       ctx.translate(res.position.x, res.position.y);
       
+      const isHovered = hoveredId === res.id;
+
       if (res.type === 'tree') {
-        // Stylized Tree
-        const isHovered = hoveredId === res.id;
-        ctx.shadowBlur = isHovered ? 15 : 0;
-        ctx.shadowColor = '#10b981';
+        // Stylized Tree - Layered
+        ctx.shadowBlur = isHovered ? 20 : 5;
+        ctx.shadowColor = isHovered ? '#10b981' : 'rgba(0,0,0,0.3)';
         
-        ctx.fillStyle = '#065f46'; // Darker forest green
+        // Base/Main
+        ctx.fillStyle = '#065f46';
         ctx.beginPath();
-        ctx.moveTo(0, -20);
-        ctx.lineTo(15, 10);
-        ctx.lineTo(-15, 10);
+        ctx.moveTo(0, -22);
+        ctx.lineTo(18, 12);
+        ctx.lineTo(-18, 12);
         ctx.closePath();
         ctx.fill();
         
-        ctx.fillStyle = '#059669'; // Lighter green layer
+        // Mid layer
+        ctx.fillStyle = '#059669';
         ctx.beginPath();
-        ctx.moveTo(0, -10);
-        ctx.lineTo(10, 15);
-        ctx.lineTo(-10, 15);
+        ctx.moveTo(0, -12);
+        ctx.lineTo(12, 18);
+        ctx.lineTo(-12, 18);
         ctx.closePath();
         ctx.fill();
         
-        ctx.fillStyle = '#78350f'; // Trunk
-        ctx.fillRect(-3, 15, 6, 8);
+        // Top layer (highlight)
+        ctx.fillStyle = '#10b981';
+        ctx.beginPath();
+        ctx.moveTo(0, -5);
+        ctx.lineTo(7, 22);
+        ctx.lineTo(-7, 22);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Trunk
+        ctx.fillStyle = '#451a03';
+        ctx.fillRect(-3, 12, 6, 12);
       } else {
-        // Stylized Rock/Ore
-        ctx.fillStyle = '#4b5563';
+        // Stylized Rock - Faceted
+        ctx.shadowBlur = isHovered ? 20 : 5;
+        ctx.shadowColor = isHovered ? '#94a3b8' : 'rgba(0,0,0,0.3)';
+
+        ctx.fillStyle = '#334155';
         ctx.beginPath();
-        ctx.moveTo(-12, 10);
-        ctx.lineTo(0, -15);
-        ctx.lineTo(12, 10);
+        ctx.moveTo(-15, 12);
+        ctx.lineTo(-5, -18);
+        ctx.lineTo(15, 12);
         ctx.closePath();
         ctx.fill();
         
-        ctx.fillStyle = '#9ca3af'; // Highlight
+        ctx.fillStyle = '#475569';
         ctx.beginPath();
-        ctx.moveTo(-8, 8);
-        ctx.lineTo(0, -10);
-        ctx.lineTo(5, 8);
+        ctx.moveTo(-8, 10);
+        ctx.lineTo(-2, -12);
+        ctx.lineTo(10, 10);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = '#94a3b8'; // Sharp highlight
+        ctx.beginPath();
+        ctx.moveTo(-2, -15);
+        ctx.lineTo(3, -10);
+        ctx.lineTo(-4, -10);
         ctx.closePath();
         ctx.fill();
       }
@@ -308,65 +342,87 @@ export function CanvasRenderer({
       ctx.shadowBlur = 10;
       ctx.shadowColor = 'rgba(0,0,0,0.5)';
       
-      if (['hub', 'barracks', 'iron_works', 'factory', 'resource_manager', 'wall'].includes(entity.type)) {
+      if (['hub', 'barracks', 'iron_works', 'factory', 'wall'].includes(entity.type)) {
         const size = BUILDING_STATS[entity.type as BuildingType].size;
         
+        // Drop Shadow
+        ctx.shadowColor = 'rgba(0,0,0,0.5)';
+        ctx.shadowBlur = 15;
+        ctx.shadowOffsetY = 5;
+
         // Base structure
-        ctx.fillStyle = '#2c3e50';
+        ctx.fillStyle = '#1e293b'; // Deep slate base
         ctx.fillRect(-size/2, -size/2, size, size);
         
-        // Roof/Detail
+        // Roof/Feature color
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
         ctx.fillStyle = color;
         ctx.beginPath();
         ctx.moveTo(-size/2, -size/2);
-        ctx.lineTo(0, -size/1.5);
+        ctx.lineTo(0, -size/1.2); // Sharper roof
         ctx.lineTo(size/2, -size/2);
         ctx.closePath();
         ctx.fill();
 
-        // Architectural details (windows/doors)
-        ctx.fillStyle = '#f1c40f';
-        ctx.fillRect(-size/4, size/4, size/8, size/8);
-        ctx.fillRect(size/8, size/4, size/8, size/8);
+        // Architectural details
+        ctx.fillStyle = '#fde047'; // Glowing windows
+        ctx.globalAlpha = 0.8;
+        ctx.fillRect(-size/3, size/6, size/10, size/10);
+        ctx.fillRect(size/6, size/6, size/10, size/10);
+        ctx.globalAlpha = 1.0;
         
+        // Emblems/Trim
+        ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+        ctx.strokeRect(-size/2 + 2, -size/2 + 2, size - 4, size - 4);
+
         // Label
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 10px Rajdhani';
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = '700 11px Rajdhani';
         ctx.textAlign = 'center';
-        ctx.fillText(entity.type.replace('_', ' ').toUpperCase(), 0, size/2 + 15);
+        ctx.fillText(entity.type.replace('_', ' ').toUpperCase(), 0, size/2 + 20);
       } else {
-        // Unit Styling
+        // Unit Styling - Dynamic Shapes
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = 'rgba(0,0,0,0.4)';
+        
         ctx.beginPath();
         if (entity.type === 'knight') {
-            // Knight - shield shape
+            // Knight - Shield with trim
             ctx.moveTo(0, -ENTITY_RADIUS);
-            ctx.lineTo(ENTITY_RADIUS, 0);
+            ctx.quadraticCurveTo(ENTITY_RADIUS, -ENTITY_RADIUS, ENTITY_RADIUS, 0);
             ctx.lineTo(0, ENTITY_RADIUS);
             ctx.lineTo(-ENTITY_RADIUS, 0);
-            ctx.closePath();
+            ctx.quadraticCurveTo(-ENTITY_RADIUS, -ENTITY_RADIUS, 0, -ENTITY_RADIUS);
         } else if (entity.type === 'archer') {
-            // Archer - triangular
-            ctx.moveTo(0, -ENTITY_RADIUS);
+            // Archer - Stealthy Triangle
+            ctx.moveTo(0, -ENTITY_RADIUS * 1.2);
             ctx.lineTo(ENTITY_RADIUS, ENTITY_RADIUS);
             ctx.lineTo(-ENTITY_RADIUS, ENTITY_RADIUS);
-            ctx.closePath();
+        } else if (entity.type === 'builder') {
+            // Builder - Hexagon
+            for (let i = 0; i < 6; i++) {
+                const angle = (i * Math.PI) / 3;
+                ctx.lineTo(Math.cos(angle) * ENTITY_RADIUS, Math.sin(angle) * ENTITY_RADIUS);
+            }
         } else {
-            // Worker - circle
+            // Other workers - Rounded Circle
             ctx.arc(0, 0, ENTITY_RADIUS, 0, Math.PI * 2);
         }
+        ctx.closePath();
         ctx.fill();
         
-        // Unit border
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-
-        // Unit Type Icon/Letter
+        // Inner detail/Emblem
+        ctx.globalAlpha = 0.4;
         ctx.fillStyle = '#fff';
-        ctx.font = 'bold 12px Rajdhani';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(entity.type[0].toUpperCase(), 0, 0);
+        ctx.beginPath();
+        ctx.arc(0, 0, ENTITY_RADIUS * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+
+        ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
       }
       
       ctx.shadowBlur = 0;
