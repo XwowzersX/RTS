@@ -187,14 +187,16 @@ export class Game {
               this.state.players[entity.playerId].resources.ladders -= 1;
               entity.isClimbing = true;
               (entity as any).climbTimer = 10000; // 10 seconds
+              (entity as any).climbStartTime = Date.now();
             }
           }
 
           if (entity.isClimbing) {
-            (entity as any).climbTimer = ((entity as any).climbTimer || 0) - 100;
-            if ((entity as any).climbTimer <= 0) {
+            const climbElapsed = Date.now() - ((entity as any).climbStartTime || Date.now());
+            if (climbElapsed > 10000) {
               entity.isClimbing = false;
               delete (entity as any).climbTimer;
+              delete (entity as any).climbStartTime;
             }
           }
 

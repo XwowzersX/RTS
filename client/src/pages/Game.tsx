@@ -191,7 +191,13 @@ export default function Game() {
           if (type === 'gather' && targetId) actions.gatherResource(targetId);
         }}
         placementMode={placementMode}
-        onBuild={actions.buildStructure}
+        onBuild={(pos) => {
+          if (pos.x === -1) {
+            setPlacementMode(null);
+          } else {
+            actions.buildStructure(pos);
+          }
+        }}
       />
 
       {/* --- HUD OVERLAY --- */}

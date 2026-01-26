@@ -224,6 +224,11 @@ export function CanvasRenderer({
     }
     ctx.stroke();
 
+    // Map Border
+    ctx.strokeStyle = "#444";
+    ctx.lineWidth = 10;
+    ctx.strokeRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
+
     // Decorative ground details (vignette/noise)
     ctx.fillStyle = "rgba(0,0,0,0.1)";
     for (let i = 0; i < 50; i++) {
@@ -456,10 +461,19 @@ export function CanvasRenderer({
 
   }, [gameState, playerId, selection, offset, selectionBox]);
 
+  const [wallDragStart, setWallDragStart] = useState<Position | null>(null);
+  const [wallDragCurrent, setWallDragCurrent] = useState<Position | null>(null);
+
   // Event Handlers
   const handleMouseDown = (e: React.MouseEvent) => {
     // 0 = Left Click, 2 = Right Click
     if (e.button === 0 && !e.altKey) { // Left Click (Normal)
+      if (placementMode === 'wall') {
+        const worldPos = screenToWorld(e.clientX, e.clientY);
+        setWallDragStart(worldPos);
+        setWallDragCurrent(worldPos);
+        return;
+      }
       if (placementMode) {
         const worldPos = screenToWorld(e.clientX, e.clientY);
         onBuild(worldPos);
@@ -547,7 +561,10 @@ export function CanvasRenderer({
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (isPanning && dragStart) {
+    const worldPos = screenToWorld(e.clientX, e.clientY);
+    if (wallDragStart) {
+      setWallDragCurrent(worldPos);
+    } else if (isPanning && dragStart) {
       setOffset(prev => ({
         x: prev.x - (e.clientX - dragStart.x) / zoom,
         y: prev.y - (e.clientY - dragStart.y) / zoom
@@ -560,6 +577,28 @@ export function CanvasRenderer({
   };
 
   const handleMouseUp = (e: React.MouseEvent) => {
+    if (wallDragStart && wallDragCurrent) {
+      // Calculate wall segments
+      const startX = Math.round(wallDragStart.x / TILE_SIZE) * TILE_SIZE;
+      const startY = Math.round(wallDragStart.y / TILE_SIZE) * TILE_SIZE;
+      const endX = Math.round(wallDragCurrent.x / TILE_SIZE) * TILE_SIZE;
+      const endY = Math.round(wallDragCurrent.y / TILE_SIZE) * TILE_SIZE;
+
+      const dx = endX - startX;
+      const dy = endY - startY;
+      const steps = Math.max(Math.abs(dx / TILE_SIZE), Math.abs(dy / TILE_SIZE));
+
+      for (let i = 0; i <= steps; i++) {
+        const t = steps === 0 ? 0 : i / steps;
+        const px = Math.round((startX + dx * t) / TILE_SIZE) * TILE_SIZE;
+        const py = Math.round((startY + dy * t) / TILE_SIZE) * TILE_SIZE;
+        onBuild({ x: px, y: py });
+      }
+      setWallDragStart(null);
+      setWallDragCurrent(null);
+      return;
+    }
+
     if (isPanning) {
       setIsPanning(false);
       setDragStart(null);
@@ -604,6 +643,19 @@ export function CanvasRenderer({
     }
   };
 
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      onBuild({ x: -1, y: -1 }); // Special value to clear placement mode in controls if needed, 
+      // but simpler to just have the parent handle it. 
+      // For now, let's just make sure we can escape placement mode.
+    }
+  }, [onBuild]);
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
+
   const handleWheel = (e: React.WheelEvent) => {
     const zoomSpeed = 0.001;
     const minZoom = 0.2;
@@ -629,8 +681,56 @@ export function CanvasRenderer({
       onWheel={handleWheel}
       onContextMenu={(e) => e.preventDefault()}
     >
-      <canvas ref={canvasRef} className="block" />
-      
+      {/* Selection Box (Screen Space) */}
+      {selectionBox && (
+        <div 
+          className="absolute border border-green-500 bg-green-500/20 pointer-events-none"
+          style={{
+            left: Math.min(selectionBox.start.x, selectionBox.current.x),
+            top: Math.min(selectionBox.start.y, selectionBox.current.y),
+            width: Math.abs(selectionBox.current.x - selectionBox.start.x),
+            height: Math.abs(selectionBox.current.y - selectionBox.start.y)
+          }}
+        />
+      )}
+
+      {/* Wall Placement Ghosting */}
+      {wallDragStart && wallDragCurrent && (
+        <div className="pointer-events-none">
+          {(() => {
+            const startX = Math.round(wallDragStart.x / TILE_SIZE) * TILE_SIZE;
+            const startY = Math.round(wallDragStart.y / TILE_SIZE) * TILE_SIZE;
+            const endX = Math.round(wallDragCurrent.x / TILE_SIZE) * TILE_SIZE;
+            const endY = Math.round(wallDragCurrent.y / TILE_SIZE) * TILE_SIZE;
+
+            const dx = endX - startX;
+            const dy = endY - startY;
+            const steps = Math.max(Math.abs(dx / TILE_SIZE), Math.abs(dy / TILE_SIZE));
+            const ghosts = [];
+
+            for (let i = 0; i <= steps; i++) {
+              const t = steps === 0 ? 0 : i / steps;
+              const wx = Math.round((startX + dx * t) / TILE_SIZE) * TILE_SIZE;
+              const wy = Math.round((startY + dy * t) / TILE_SIZE) * TILE_SIZE;
+              const screenPos = worldToScreen(wx, wy);
+              ghosts.push(
+                <div 
+                  key={i}
+                  className="absolute border border-amber-500/50 bg-amber-500/20"
+                  style={{
+                    left: screenPos.x - (TILE_SIZE * zoom) / 2,
+                    top: screenPos.y - (TILE_SIZE * zoom) / 2,
+                    width: TILE_SIZE * zoom,
+                    height: TILE_SIZE * zoom,
+                  }}
+                />
+              );
+            }
+            return ghosts;
+          })()}
+        </div>
+      )}
+
       {/* Placement Ghost */}
       {placementMode && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-black/80 text-white px-4 py-2 rounded-full pointer-events-none border border-amber-500 animate-pulse z-50">

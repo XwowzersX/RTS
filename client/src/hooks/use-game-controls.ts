@@ -55,7 +55,7 @@ export function useGameControls({ sendMessage, playerId, gameState }: UseGameCon
       builderId
     });
     playSound('build');
-    setPlacementMode(null);
+    // Removed setPlacementMode(null) to allow continuous placement/dragging
   }, [placementMode, selection, gameState, sendMessage]);
 
   const trainUnit = useCallback((buildingId: string, unitType: UnitType | 'iron_ingot' | 'ladder') => {
