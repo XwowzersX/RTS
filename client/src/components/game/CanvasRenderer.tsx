@@ -526,11 +526,6 @@ export function CanvasRenderer({
       if (placementMode) {
         const worldPos = screenToWorld(e.clientX, e.clientY);
         onBuild(worldPos);
-        
-        // Start dragging for wall chaining
-        if (placementMode === 'wall') {
-          setDragStart({ x: e.clientX, y: e.clientY });
-        }
         return;
       }
 
@@ -548,6 +543,13 @@ export function CanvasRenderer({
       e.preventDefault();
       if (!gameState) return;
       const worldPos = screenToWorld(e.clientX, e.clientY);
+      
+      // Wall placement support for Right Click
+      if (placementMode === 'wall') {
+        onBuild(worldPos);
+        setDragStart({ x: e.clientX, y: e.clientY });
+        return;
+      }
       
       // Check if clicked an enemy or resource
       // Simple collision check (optimize with spatial hash later if needed)
@@ -626,14 +628,14 @@ export function CanvasRenderer({
     }
     
     // Auto-wall placement logic
-    if (placementMode === 'wall' && dragStart && !isPanning) {
-      const worldPos = screenToWorld(e.clientX, e.clientY);
+    if (placementMode === 'wall' && dragStart) {
+      const worldPos = screenToWorld(mousePos.x, mousePos.y);
       const startWorld = screenToWorld(dragStart.x, dragStart.y);
       const dist = Math.hypot(worldPos.x - startWorld.x, worldPos.y - startWorld.y);
       
       if (dist > 45) { // Minimum distance for next wall segment
         onBuild(worldPos);
-        setDragStart({ x: e.clientX, y: e.clientY });
+        setDragStart({ x: mousePos.x, y: mousePos.y });
       }
     }
 
@@ -720,7 +722,7 @@ export function CanvasRenderer({
           </div>
           {placementMode === 'wall' && (
             <div className="bg-black/60 text-gray-300 px-3 py-1 rounded-full text-xs border border-white/10">
-              Left Click & Drag to chain walls
+              Right Click & Drag to chain walls
             </div>
           )}
         </div>
