@@ -354,6 +354,23 @@ export function CanvasRenderer({
         ctx.fillStyle = '#1e293b'; // Deep slate base
         ctx.fillRect(-size/2, -size/2, size, size);
         
+        // Wall connection visuals
+        if (entity.type === 'wall') {
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 4;
+          Object.values(gameState.entities).forEach(other => {
+            if (other.type === 'wall' && other.id !== entity.id && other.playerId === entity.playerId) {
+              const d = Math.hypot(other.position.x - entity.position.x, other.position.y - entity.position.y);
+              if (d < 60) {
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(other.position.x - entity.position.x, other.position.y - entity.position.y);
+                ctx.stroke();
+              }
+            }
+          });
+        }
+        
         // Roof/Feature color
         ctx.shadowBlur = 0;
         ctx.shadowOffsetY = 0;
@@ -430,10 +447,22 @@ export function CanvasRenderer({
       // Health Bar
       const hpPct = entity.hp / entity.maxHp;
       const size = BUILDING_STATS[entity.type as BuildingType]?.size;
-      ctx.fillStyle = '#ef4444';
-      ctx.fillRect(-20, -size/2 - 10 || -30, 40, 4);
-      ctx.fillStyle = '#22c55e';
-      ctx.fillRect(-20, -size/2 - 10 || -30, 40 * hpPct, 4);
+      const barY = -size/2 - 10 || -30;
+      
+      // Background bar
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(-20, barY, 40, 4);
+      
+      // Health fill
+      ctx.fillStyle = hpPct > 0.5 ? '#22c55e' : hpPct > 0.2 ? '#f59e0b' : '#ef4444';
+      ctx.fillRect(-20, barY, 40 * hpPct, 4);
+
+      // Status Indicator for combat
+      if (entity.state === 'attacking') {
+        ctx.fillStyle = '#ef4444';
+        ctx.font = '900 12px Cinzel';
+        ctx.fillText('⚔', 25, barY + 4);
+      }
 
       ctx.restore();
     });
@@ -463,6 +492,11 @@ export function CanvasRenderer({
       if (placementMode) {
         const worldPos = screenToWorld(e.clientX, e.clientY);
         onBuild(worldPos);
+        
+        // Start dragging for wall chaining
+        if (placementMode === 'wall') {
+          setDragStart({ x: e.clientX, y: e.clientY });
+        }
         return;
       }
 
@@ -556,6 +590,19 @@ export function CanvasRenderer({
     } else if (selectionBox) {
       setSelectionBox(prev => prev ? { ...prev, current: { x: e.clientX, y: e.clientY } } : null);
     }
+    
+    // Auto-wall placement logic
+    if (placementMode === 'wall' && dragStart && !isPanning) {
+      const worldPos = screenToWorld(e.clientX, e.clientY);
+      const startWorld = screenToWorld(dragStart.x, dragStart.y);
+      const dist = Math.hypot(worldPos.x - startWorld.x, worldPos.y - startWorld.y);
+      
+      if (dist > 45) { // Minimum distance for next wall segment
+        onBuild(worldPos);
+        setDragStart({ x: e.clientX, y: e.clientY });
+      }
+    }
+
     setMousePos({ x: e.clientX, y: e.clientY });
   };
 
