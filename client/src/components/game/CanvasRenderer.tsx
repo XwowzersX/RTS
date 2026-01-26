@@ -240,69 +240,45 @@ export function CanvasRenderer({
       ctx.translate(res.position.x, res.position.y);
       
       const isHovered = hoveredId === res.id;
+      const radius = 15;
 
       if (res.type === 'tree') {
-        // Stylized Tree - Layered
+        // Wood Circle
         ctx.shadowBlur = isHovered ? 20 : 5;
         ctx.shadowColor = isHovered ? '#10b981' : 'rgba(0,0,0,0.3)';
         
-        // Base/Main
         ctx.fillStyle = '#065f46';
         ctx.beginPath();
-        ctx.moveTo(0, -22);
-        ctx.lineTo(18, 12);
-        ctx.lineTo(-18, 12);
-        ctx.closePath();
+        ctx.arc(0, 0, radius, 0, Math.PI * 2);
         ctx.fill();
         
-        // Mid layer
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        // Inner detail
         ctx.fillStyle = '#059669';
         ctx.beginPath();
-        ctx.moveTo(0, -12);
-        ctx.lineTo(12, 18);
-        ctx.lineTo(-12, 18);
-        ctx.closePath();
+        ctx.arc(0, 0, radius * 0.6, 0, Math.PI * 2);
         ctx.fill();
-        
-        // Top layer (highlight)
-        ctx.fillStyle = '#10b981';
-        ctx.beginPath();
-        ctx.moveTo(0, -5);
-        ctx.lineTo(7, 22);
-        ctx.lineTo(-7, 22);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Trunk
-        ctx.fillStyle = '#451a03';
-        ctx.fillRect(-3, 12, 6, 12);
       } else {
-        // Stylized Rock - Faceted
+        // Stone Circle
         ctx.shadowBlur = isHovered ? 20 : 5;
         ctx.shadowColor = isHovered ? '#94a3b8' : 'rgba(0,0,0,0.3)';
 
         ctx.fillStyle = '#334155';
         ctx.beginPath();
-        ctx.moveTo(-15, 12);
-        ctx.lineTo(-5, -18);
-        ctx.lineTo(15, 12);
-        ctx.closePath();
+        ctx.arc(0, 0, radius, 0, Math.PI * 2);
         ctx.fill();
         
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Inner detail
         ctx.fillStyle = '#475569';
         ctx.beginPath();
-        ctx.moveTo(-8, 10);
-        ctx.lineTo(-2, -12);
-        ctx.lineTo(10, 10);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = '#94a3b8'; // Sharp highlight
-        ctx.beginPath();
-        ctx.moveTo(-2, -15);
-        ctx.lineTo(3, -10);
-        ctx.lineTo(-4, -10);
-        ctx.closePath();
+        ctx.arc(0, 0, radius * 0.6, 0, Math.PI * 2);
         ctx.fill();
       }
       
