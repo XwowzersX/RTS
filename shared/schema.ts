@@ -94,6 +94,7 @@ export interface GameState {
   resources: { id: string, type: 'tree' | 'rock', position: Position, amount: number }[];
   winner?: string;
   startTime?: number;
+  resourceClusters?: Position[];
 }
 
 // --- WebSocket Protocol ---

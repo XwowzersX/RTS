@@ -15,8 +15,10 @@ export class Game {
       status: 'waiting',
       players: {},
       entities: {},
-      resources: this.generateResources(),
+      resources: [],
+      resourceClusters: [],
     };
+    this.state.resources = this.generateResources();
   }
 
   private generateResources() {
@@ -24,6 +26,7 @@ export class Game {
     const NUM_CLUSTERS = 8;
     const RESOURCES_PER_CLUSTER = 6;
     const CLUSTER_RADIUS = 150;
+    const HUB_OFFSET = 120; // Hub must be placed this far from cluster center
 
     // Fixed locations for clusters (near starts and around map)
     const clusterCenters = [
@@ -37,17 +40,22 @@ export class Game {
       { x: MAP_WIDTH - 1000, y: MAP_HEIGHT - 1000 }
     ];
 
+    // Store cluster centers for hub placement validation
+    (this.state as any).resourceClusters = clusterCenters;
+
     let resCount = 0;
     clusterCenters.forEach((center, cIdx) => {
+      // Create resource ring
       for (let i = 0; i < RESOURCES_PER_CLUSTER; i++) {
         const angle = (i / RESOURCES_PER_CLUSTER) * Math.PI * 2;
-        const x = center.x + Math.cos(angle) * CLUSTER_RADIUS * (0.8 + Math.random() * 0.4);
-        const y = center.y + Math.sin(angle) * CLUSTER_RADIUS * (0.8 + Math.random() * 0.4);
+        // Resources are placed in a ring around the center
+        const x = center.x + Math.cos(angle) * (CLUSTER_RADIUS * 0.5);
+        const y = center.y + Math.sin(angle) * (CLUSTER_RADIUS * 0.5);
         
         resources.push({
           id: `res-${resCount++}`,
           type: cIdx % 2 === 0 ? 'tree' : 'rock',
-          amount: 1000, // Increased initial amount for clusters
+          amount: 1000,
           position: { x, y }
         });
       }
@@ -386,6 +394,16 @@ export class Game {
         const builder = this.state.entities[builderId];
         if (!builder || builder.type !== 'builder' || builder.playerId !== playerId) {
             return;
+        }
+
+        // Hub placement restriction
+        if (buildingType === 'hub') {
+          const clusters = (this.state as any).resourceClusters || [];
+          const isValidSpot = clusters.some((center: Position) => {
+            const d = this.distance(position, center);
+            return d > 80 && d < 150; // Must be in the "sweet spot" ring
+          });
+          if (!isValidSpot) return;
         }
 
         const cost = COSTS[buildingType as BuildingType];

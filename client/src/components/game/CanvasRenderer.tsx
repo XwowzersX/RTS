@@ -465,6 +465,22 @@ export function CanvasRenderer({
       const size = BUILDING_STATS[placementMode].size;
       const color = gameState.players[playerId!]?.color || '#22c55e';
       
+      // Draw valid Hub spots
+      if (placementMode === 'hub') {
+        const clusters = (gameState as any).resourceClusters || [];
+        clusters.forEach((center: Position) => {
+          ctx.save();
+          ctx.translate(center.x, center.y);
+          ctx.strokeStyle = 'rgba(34, 197, 94, 0.3)';
+          ctx.setLineDash([5, 5]);
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(0, 0, 115, 0, Math.PI * 2); // Visual indicator for sweet spot
+          ctx.stroke();
+          ctx.restore();
+        });
+      }
+
       ctx.save();
       ctx.translate(worldPos.x, worldPos.y);
       ctx.globalAlpha = 0.5;
