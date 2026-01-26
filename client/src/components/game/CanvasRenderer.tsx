@@ -473,7 +473,7 @@ export function CanvasRenderer({
     ctx.restore();
 
     // 5. Selection Box (Screen Space)
-    if (selectionBox) {
+    if (selectionBox && !placementMode) {
       ctx.strokeStyle = '#22c55e';
       ctx.fillStyle = '#22c55e20';
       ctx.lineWidth = 1;
@@ -481,6 +481,40 @@ export function CanvasRenderer({
       const h = selectionBox.current.y - selectionBox.start.y;
       ctx.strokeRect(selectionBox.start.x, selectionBox.start.y, w, h);
       ctx.fillRect(selectionBox.start.x, selectionBox.start.y, w, h);
+    }
+
+    // 6. Placement Ghost (World Space)
+    if (placementMode) {
+      const worldPos = screenToWorld(mousePos.x, mousePos.y);
+      const size = BUILDING_STATS[placementMode].size;
+      const color = gameState.players[playerId!]?.color || '#22c55e';
+      
+      ctx.save();
+      ctx.translate(worldPos.x, worldPos.y);
+      ctx.globalAlpha = 0.5;
+      
+      // Outline
+      ctx.strokeStyle = color;
+      ctx.setLineDash([5, 5]);
+      ctx.lineWidth = 2;
+      ctx.strokeRect(-size/2, -size/2, size, size);
+      
+      // Connection preview for walls
+      if (placementMode === 'wall') {
+        Object.values(gameState.entities).forEach(other => {
+          if (other.type === 'wall' && other.playerId === playerId) {
+            const d = Math.hypot(other.position.x - worldPos.x, other.position.y - worldPos.y);
+            if (d < 60) {
+              ctx.beginPath();
+              ctx.moveTo(0, 0);
+              ctx.lineTo(other.position.x - worldPos.x, other.position.y - worldPos.y);
+              ctx.stroke();
+            }
+          }
+        });
+      }
+      
+      ctx.restore();
     }
 
   }, [gameState, playerId, selection, offset, selectionBox]);
@@ -678,10 +712,17 @@ export function CanvasRenderer({
     >
       <canvas ref={canvasRef} className="block" />
       
-      {/* Placement Ghost */}
+      {/* Placement Preview / Ghost */}
       {placementMode && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-black/80 text-white px-4 py-2 rounded-full pointer-events-none border border-amber-500 animate-pulse z-50">
-          Placing {placementMode}... (Left Click to Build)
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 pointer-events-none z-50">
+          <div className="bg-black/80 text-white px-4 py-2 rounded-full border border-amber-500 animate-pulse font-bold">
+            Placing {placementMode.replace('_', ' ').toUpperCase()}...
+          </div>
+          {placementMode === 'wall' && (
+            <div className="bg-black/60 text-gray-300 px-3 py-1 rounded-full text-xs border border-white/10">
+              Left Click & Drag to chain walls
+            </div>
+          )}
         </div>
       )}
     </div>
