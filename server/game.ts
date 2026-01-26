@@ -21,18 +21,38 @@ export class Game {
 
   private generateResources() {
     const resources: GameState['resources'] = [];
-    // Simple generation: Clusters of trees and rocks
-    for (let i = 0; i < 20; i++) {
-      resources.push({
-        id: `res-${i}`,
-        type: i % 3 === 0 ? 'rock' : 'tree',
-        amount: 500,
-        position: {
-          x: Math.random() * MAP_WIDTH,
-          y: Math.random() * MAP_HEIGHT
-        }
-      });
-    }
+    const NUM_CLUSTERS = 8;
+    const RESOURCES_PER_CLUSTER = 6;
+    const CLUSTER_RADIUS = 150;
+
+    // Fixed locations for clusters (near starts and around map)
+    const clusterCenters = [
+      { x: 250, y: 250 }, // Near Blue Start
+      { x: MAP_WIDTH - 250, y: MAP_HEIGHT - 250 }, // Near Red Start
+      { x: MAP_WIDTH / 2, y: 200 }, // Mid North
+      { x: MAP_WIDTH / 2, y: MAP_HEIGHT - 200 }, // Mid South
+      { x: 200, y: MAP_HEIGHT / 2 }, // Mid West
+      { x: MAP_WIDTH - 200, y: MAP_HEIGHT / 2 }, // Mid East
+      { x: 1000, y: 1000 },
+      { x: MAP_WIDTH - 1000, y: MAP_HEIGHT - 1000 }
+    ];
+
+    let resCount = 0;
+    clusterCenters.forEach((center, cIdx) => {
+      for (let i = 0; i < RESOURCES_PER_CLUSTER; i++) {
+        const angle = (i / RESOURCES_PER_CLUSTER) * Math.PI * 2;
+        const x = center.x + Math.cos(angle) * CLUSTER_RADIUS * (0.8 + Math.random() * 0.4);
+        const y = center.y + Math.sin(angle) * CLUSTER_RADIUS * (0.8 + Math.random() * 0.4);
+        
+        resources.push({
+          id: `res-${resCount++}`,
+          type: cIdx % 2 === 0 ? 'tree' : 'rock',
+          amount: 1000, // Increased initial amount for clusters
+          position: { x, y }
+        });
+      }
+    });
+
     return resources;
   }
 
@@ -146,10 +166,17 @@ export class Game {
     
     // Very basic gathering logic simulation
     if (entity.state === 'gathering' && entity.targetId) {
-      const resource = this.state.resources.find(r => r.id === entity.targetId);
+      const resourceIdx = this.state.resources.findIndex(r => r.id === entity.targetId);
+      const resource = this.state.resources[resourceIdx];
+      
       if (resource) {
         const dist = this.distance(entity.position, resource.position);
         if (dist < 30) {
+           // Gather amount
+           resource.amount -= 10;
+           if (resource.amount <= 0) {
+             this.state.resources.splice(resourceIdx, 1);
+           }
            entity.state = 'returning';
         } else {
           this.moveTowards(entity, resource.position);
