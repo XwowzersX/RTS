@@ -459,30 +459,50 @@ export function CanvasRenderer({
       ctx.fillRect(selectionBox.start.x, selectionBox.start.y, w, h);
     }
 
-    // 6. Placement Ghost (World Space)
+    // 6. Placement Ghost & Hub Spots
+    const clusters = (gameState as any).resourceClusters || [];
+    const worldMouse = screenToWorld(mousePos.x, mousePos.y);
+    let hoveredSpot: Position | null = null;
+
+    clusters.forEach((center: Position) => {
+      const d = Math.sqrt(Math.pow(worldMouse.x - center.x, 2) + Math.pow(worldMouse.y - center.y, 2));
+      const inSpot = d > 80 && d < 150;
+      
+      ctx.save();
+      ctx.translate(center.x, center.y);
+      
+      // Blue transparent square for valid hub spot
+      ctx.fillStyle = inSpot ? 'rgba(59, 130, 246, 0.4)' : 'rgba(59, 130, 246, 0.1)';
+      ctx.strokeStyle = 'rgba(59, 130, 246, 0.5)';
+      ctx.lineWidth = 2;
+      
+      // Ring indicator
+      ctx.beginPath();
+      ctx.arc(0, 0, 115, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.setLineDash([5, 5]);
+      ctx.stroke();
+
+      if (inSpot) {
+        hoveredSpot = center;
+        // Tooltip
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 12px Rajdhani';
+        ctx.textAlign = 'center';
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = 'black';
+        ctx.fillText('CLICK TO MOVE HUB HERE', 0, -130);
+      }
+      
+      ctx.restore();
+    });
+
     if (placementMode) {
-      const worldPos = screenToWorld(mousePos.x, mousePos.y);
       const size = BUILDING_STATS[placementMode].size;
       const color = gameState.players[playerId!]?.color || '#22c55e';
       
-      // Draw valid Hub spots
-      if (placementMode === 'hub') {
-        const clusters = (gameState as any).resourceClusters || [];
-        clusters.forEach((center: Position) => {
-          ctx.save();
-          ctx.translate(center.x, center.y);
-          ctx.strokeStyle = 'rgba(34, 197, 94, 0.3)';
-          ctx.setLineDash([5, 5]);
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.arc(0, 0, 115, 0, Math.PI * 2); // Visual indicator for sweet spot
-          ctx.stroke();
-          ctx.restore();
-        });
-      }
-
       ctx.save();
-      ctx.translate(worldPos.x, worldPos.y);
+      ctx.translate(worldMouse.x, worldMouse.y);
       ctx.globalAlpha = 0.5;
       
       // Outline

@@ -45,12 +45,12 @@ export class Game {
 
     let resCount = 0;
     clusterCenters.forEach((center, cIdx) => {
-      // Create resource ring
+      // Create resource ring - spaced out more
       for (let i = 0; i < RESOURCES_PER_CLUSTER; i++) {
         const angle = (i / RESOURCES_PER_CLUSTER) * Math.PI * 2;
-        // Resources are placed in a ring around the center
-        const x = center.x + Math.cos(angle) * (CLUSTER_RADIUS * 0.5);
-        const y = center.y + Math.sin(angle) * (CLUSTER_RADIUS * 0.5);
+        // Resources are placed in a wider ring around the center
+        const x = center.x + Math.cos(angle) * (CLUSTER_RADIUS * 0.7);
+        const y = center.y + Math.sin(angle) * (CLUSTER_RADIUS * 0.7);
         
         resources.push({
           id: `res-${resCount++}`,
@@ -389,14 +389,8 @@ export class Game {
     }
     if (action.type === 'action_build') {
         const { buildingType, position, builderId } = action.payload;
-        if (!builderId) return;
         
-        const builder = this.state.entities[builderId];
-        if (!builder || builder.type !== 'builder' || builder.playerId !== playerId) {
-            return;
-        }
-
-        // Hub placement restriction
+        // Hub relocation logic
         if (buildingType === 'hub') {
           const clusters = (this.state as any).resourceClusters || [];
           const isValidSpot = clusters.some((center: Position) => {
@@ -404,6 +398,20 @@ export class Game {
             return d > 80 && d < 150; // Must be in the "sweet spot" ring
           });
           if (!isValidSpot) return;
+
+          // If hub already exists, move it instead of building new
+          const existingHub = Object.values(this.state.entities).find(e => e.type === 'hub' && e.playerId === playerId);
+          if (existingHub) {
+            existingHub.position = position;
+            return;
+          }
+        }
+
+        if (!builderId) return;
+        
+        const builder = this.state.entities[builderId];
+        if (!builder || builder.type !== 'builder' || builder.playerId !== playerId) {
+            return;
         }
 
         const cost = COSTS[buildingType as BuildingType];
