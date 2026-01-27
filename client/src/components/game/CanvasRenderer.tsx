@@ -459,7 +459,7 @@ export function CanvasRenderer({
       ctx.fillRect(selectionBox.start.x, selectionBox.start.y, w, h);
     }
 
-    // 6. Hub Relocation Spots
+    // 6. Hub Relocation Spots (Drawn BEFORE entities to be on ground)
     const clusters = (gameState as any).resourceClusters || [];
     const worldMouse = screenToWorld(mousePos.x, mousePos.y);
 
@@ -472,6 +472,10 @@ export function CanvasRenderer({
       const hubSize = BUILDING_STATS.hub.size;
       
       ctx.save();
+      // Apply world transform
+      ctx.scale(zoom, zoom);
+      ctx.translate(-offset.x / zoom, -offset.y / zoom);
+      
       ctx.translate(center.x, center.y);
       
       // Blue transparent square for valid hub spot
@@ -488,7 +492,7 @@ export function CanvasRenderer({
       
       ctx.lineWidth = 2;
       
-      // Square indicator instead of ring
+      // Square indicator
       ctx.fillRect(-hubSize/2, -hubSize/2, hubSize, hubSize);
       ctx.setLineDash([5, 5]);
       ctx.strokeRect(-hubSize/2, -hubSize/2, hubSize, hubSize);
