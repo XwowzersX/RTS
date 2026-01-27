@@ -504,7 +504,7 @@ export function CanvasRenderer({
         ctx.fillStyle = 'white';
         ctx.font = 'bold 14px Rajdhani';
         ctx.textAlign = 'center';
-        ctx.fillText('MOVE HUB HERE', 0, -hubSize/2 - 20);
+        ctx.fillText('RIGHT-CLICK HUB TO SNAP HERE', 0, -hubSize/2 - 20);
       }
       
       ctx.restore();

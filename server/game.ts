@@ -357,6 +357,21 @@ export class Game {
   handleAction(playerId: string, action: any) {
     if (action.type === 'action_move') {
        const { entityIds, target } = action.payload;
+       
+       // Special Hub Right-Click Snap Logic
+       const clusters = (this.state as any).resourceClusters || [];
+       const snapSpot = clusters.find((center: Position) => this.distance(target, center) < 80);
+       
+       if (snapSpot) {
+         const hubsInSelection = entityIds.map((id: string) => this.state.entities[id]).filter((e: any) => e && e.type === 'hub' && e.playerId === playerId);
+         if (hubsInSelection.length > 0) {
+           hubsInSelection.forEach((hub: any) => {
+             hub.position = { ...snapSpot };
+           });
+           return;
+         }
+       }
+
        console.log(`Action Move for ${entityIds.length} units to ${JSON.stringify(target)}`);
        entityIds.forEach((id: string) => {
          const e = this.state.entities[id];
