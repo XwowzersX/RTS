@@ -95,6 +95,7 @@ export interface GameState {
   winner?: string;
   startTime?: number;
   resourceClusters?: Position[];
+  fogOfWar?: Record<string, boolean[]>; // playerId -> grid of visibility (100x100 for 4000x4000 map)
 }
 
 // --- WebSocket Protocol ---

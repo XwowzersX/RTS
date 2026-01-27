@@ -17,6 +17,7 @@ export class Game {
       entities: {},
       resources: [],
       resourceClusters: [],
+      fogOfWar: {},
     };
     this.state.resources = this.generateResources();
   }
@@ -126,6 +127,7 @@ export class Game {
     if (this.state.status !== 'playing') return;
 
     // Game Logic Loop
+    this.updateFogOfWar();
     for (const entityId in this.state.entities) {
       const entity = this.state.entities[entityId];
       if (entity.hp <= 0) {
@@ -141,6 +143,39 @@ export class Game {
     }
 
     this.onUpdate(this.state);
+  }
+
+  private updateFogOfWar() {
+    const GRID_SIZE = 100;
+    const CELL_SIZE = MAP_WIDTH / GRID_SIZE;
+    
+    for (const playerId in this.state.players) {
+      if (!this.state.fogOfWar![playerId]) {
+        this.state.fogOfWar![playerId] = new Array(GRID_SIZE * GRID_SIZE).fill(false);
+      }
+      
+      const fog = this.state.fogOfWar![playerId];
+      const entities = Object.values(this.state.entities).filter(e => e.playerId === playerId);
+      
+      for (let i = 0; i < fog.length; i++) {
+        const gx = i % GRID_SIZE;
+        const gy = Math.floor(i / GRID_SIZE);
+        const worldX = gx * CELL_SIZE + CELL_SIZE / 2;
+        const worldY = gy * CELL_SIZE + CELL_SIZE / 2;
+        
+        let visible = false;
+        for (const entity of entities) {
+          const visionRange = entity.type === 'archer' ? 300 : entity.type === 'hub' ? 400 : 200;
+          const dx = worldX - entity.position.x;
+          const dy = worldY - entity.position.y;
+          if (dx*dx + dy*dy < visionRange*visionRange) {
+            visible = true;
+            break;
+          }
+        }
+        fog[i] = visible;
+      }
+    }
   }
 
   private handleEntityBehavior(entity: Entity) {

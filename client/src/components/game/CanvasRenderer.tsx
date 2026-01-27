@@ -443,8 +443,21 @@ export function CanvasRenderer({
       ctx.restore();
     });
 
-    // 4. Fog of War / Lighting (Optional, simple vignette)
-    // Not implemented for performance in MVP, but could add gradient overlay
+    // 4. Fog of War Rendering
+    if (playerId && gameState.fogOfWar?.[playerId]) {
+      const GRID_SIZE = 100;
+      const CELL_SIZE = MAP_WIDTH / GRID_SIZE;
+      const fog = gameState.fogOfWar[playerId];
+      
+      ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+      for (let i = 0; i < fog.length; i++) {
+        if (!fog[i]) {
+          const gx = i % GRID_SIZE;
+          const gy = Math.floor(i / GRID_SIZE);
+          ctx.fillRect(gx * CELL_SIZE, gy * CELL_SIZE, CELL_SIZE + 1, CELL_SIZE + 1);
+        }
+      }
+    }
 
     ctx.restore();
 
