@@ -459,14 +459,14 @@ export function CanvasRenderer({
       ctx.fillRect(selectionBox.start.x, selectionBox.start.y, w, h);
     }
 
-    // 6. Placement Ghost & Hub Spots
+    // 6. Hub Relocation Spots
     const clusters = (gameState as any).resourceClusters || [];
     const worldMouse = screenToWorld(mousePos.x, mousePos.y);
-    let hoveredSpot: Position | null = null;
 
     clusters.forEach((center: Position) => {
       const d = Math.sqrt(Math.pow(worldMouse.x - center.x, 2) + Math.pow(worldMouse.y - center.y, 2));
-      const inSpot = d > 80 && d < 150;
+      const inSpot = d < 40;
+      const hubSize = BUILDING_STATS.hub.size;
       
       ctx.save();
       ctx.translate(center.x, center.y);
@@ -476,22 +476,19 @@ export function CanvasRenderer({
       ctx.strokeStyle = 'rgba(59, 130, 246, 0.5)';
       ctx.lineWidth = 2;
       
-      // Ring indicator
-      ctx.beginPath();
-      ctx.arc(0, 0, 115, 0, Math.PI * 2);
-      ctx.fill();
+      // Square indicator instead of ring
+      ctx.fillRect(-hubSize/2, -hubSize/2, hubSize, hubSize);
       ctx.setLineDash([5, 5]);
-      ctx.stroke();
+      ctx.strokeRect(-hubSize/2, -hubSize/2, hubSize, hubSize);
 
       if (inSpot) {
-        hoveredSpot = center;
         // Tooltip
         ctx.fillStyle = 'white';
         ctx.font = 'bold 12px Rajdhani';
         ctx.textAlign = 'center';
         ctx.shadowBlur = 10;
         ctx.shadowColor = 'black';
-        ctx.fillText('CLICK TO MOVE HUB HERE', 0, -130);
+        ctx.fillText('MOVE HUB HERE', 0, -hubSize/2 - 20);
       }
       
       ctx.restore();
@@ -515,11 +512,11 @@ export function CanvasRenderer({
       if (placementMode === 'wall') {
         Object.values(gameState.entities).forEach(other => {
           if (other.type === 'wall' && other.playerId === playerId) {
-            const d = Math.hypot(other.position.x - worldPos.x, other.position.y - worldPos.y);
+            const d = Math.hypot(other.position.x - worldMouse.x, other.position.y - worldMouse.y);
             if (d < 60) {
               ctx.beginPath();
               ctx.moveTo(0, 0);
-              ctx.lineTo(other.position.x - worldPos.x, other.position.y - worldPos.y);
+              ctx.lineTo(other.position.x - worldMouse.x, other.position.y - worldMouse.y);
               ctx.stroke();
             }
           }
@@ -535,8 +532,21 @@ export function CanvasRenderer({
   const handleMouseDown = (e: React.MouseEvent) => {
     // 0 = Left Click, 2 = Right Click
     if (e.button === 0 && !e.altKey) { // Left Click (Normal)
+      const worldPos = screenToWorld(e.clientX, e.clientY);
+
+      // Hub Relocation Spot Click
+      const clusters = (gameState as any).resourceClusters || [];
+      const clickedSpot = clusters.find((center: any) => {
+        const d = Math.sqrt(Math.pow(worldPos.x - center.x, 2) + Math.pow(worldPos.y - center.y, 2));
+        return d < 40;
+      });
+
+      if (clickedSpot) {
+        onBuild(clickedSpot); // Snap to exact center
+        return;
+      }
+
       if (placementMode) {
-        const worldPos = screenToWorld(e.clientX, e.clientY);
         onBuild(worldPos);
         return;
       }

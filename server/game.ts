@@ -49,8 +49,8 @@ export class Game {
       for (let i = 0; i < RESOURCES_PER_CLUSTER; i++) {
         const angle = (i / RESOURCES_PER_CLUSTER) * Math.PI * 2;
         // Resources are placed in a wider ring around the center
-        const x = center.x + Math.cos(angle) * (CLUSTER_RADIUS * 0.7);
-        const y = center.y + Math.sin(angle) * (CLUSTER_RADIUS * 0.7);
+        const x = center.x + Math.cos(angle) * (CLUSTER_RADIUS * 0.9);
+        const y = center.y + Math.sin(angle) * (CLUSTER_RADIUS * 0.9);
         
         resources.push({
           id: `res-${resCount++}`,
@@ -395,7 +395,7 @@ export class Game {
           const clusters = (this.state as any).resourceClusters || [];
           const isValidSpot = clusters.some((center: Position) => {
             const d = this.distance(position, center);
-            return d > 80 && d < 150; // Must be in the "sweet spot" ring
+            return d < 40; // Only exactly in the center of resources
           });
           if (!isValidSpot) return;
 
