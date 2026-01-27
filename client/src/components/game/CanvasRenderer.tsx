@@ -514,32 +514,51 @@ export function CanvasRenderer({
       const size = BUILDING_STATS[placementMode].size;
       const color = gameState.players[playerId!]?.color || '#22c55e';
       
-      ctx.save();
-      ctx.translate(worldMouse.x, worldMouse.y);
-      ctx.globalAlpha = 0.5;
-      
-      // Outline
-      ctx.strokeStyle = color;
-      ctx.setLineDash([5, 5]);
-      ctx.lineWidth = 2;
-      ctx.strokeRect(-size/2, -size/2, size, size);
-      
-      // Connection preview for walls
-      if (placementMode === 'wall') {
-        Object.values(gameState.entities).forEach(other => {
-          if (other.type === 'wall' && other.playerId === playerId) {
-            const d = Math.hypot(other.position.x - worldMouse.x, other.position.y - worldMouse.y);
-            if (d < 60) {
-              ctx.beginPath();
-              ctx.moveTo(0, 0);
-              ctx.lineTo(other.position.x - worldMouse.x, other.position.y - worldMouse.y);
-              ctx.stroke();
-            }
-          }
+      let finalPos = worldMouse;
+      let isValidHubPlacement = true;
+
+      if (placementMode === 'hub') {
+        const snapSpot = clusters.find((center: Position) => {
+          const dx = worldMouse.x - center.x;
+          const dy = worldMouse.y - center.y;
+          return Math.sqrt(dx * dx + dy * dy) < 80;
         });
+        
+        if (snapSpot) {
+          finalPos = snapSpot;
+        } else {
+          isValidHubPlacement = false;
+        }
       }
-      
-      ctx.restore();
+
+      if (isValidHubPlacement) {
+        ctx.save();
+        ctx.translate(finalPos.x, finalPos.y);
+        ctx.globalAlpha = 0.5;
+        
+        // Outline
+        ctx.strokeStyle = color;
+        ctx.setLineDash([5, 5]);
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-size/2, -size/2, size, size);
+        
+        // Connection preview for walls
+        if (placementMode === 'wall') {
+          Object.values(gameState.entities).forEach(other => {
+            if (other.type === 'wall' && other.playerId === playerId) {
+              const d = Math.hypot(other.position.x - finalPos.x, other.position.y - finalPos.y);
+              if (d < 60) {
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(other.position.x - finalPos.x, other.position.y - finalPos.y);
+                ctx.stroke();
+              }
+            }
+          });
+        }
+        
+        ctx.restore();
+      }
     }
 
   }, [gameState, playerId, selection, offset, selectionBox]);

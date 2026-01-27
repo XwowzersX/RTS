@@ -393,21 +393,15 @@ export class Game {
         // Hub relocation logic
         if (buildingType === 'hub') {
           const clusters = (this.state as any).resourceClusters || [];
-          const isValidSpot = clusters.some((center: Position) => {
-            const d = this.distance(position, center);
-            return d < 60; // Slightly larger tolerance for snapping
-          });
+          // Find the exact cluster center to snap to within a slightly larger radius for click comfort
+          const snapSpot = clusters.find((center: Position) => this.distance(position, center) < 80);
           
-          if (!isValidSpot) return;
-
-          // Find the exact cluster center to snap to
-          const snapSpot = clusters.find((center: Position) => this.distance(position, center) < 60);
-          const finalPos = snapSpot || position;
+          if (!snapSpot) return;
 
           // If hub already exists, move it instead of building new
           const existingHub = Object.values(this.state.entities).find(e => e.type === 'hub' && e.playerId === playerId);
           if (existingHub) {
-            existingHub.position = finalPos;
+            existingHub.position = snapSpot;
             return;
           }
           
@@ -416,7 +410,7 @@ export class Game {
             id: `hub-${playerId}-${Date.now()}`,
             type: 'hub',
             playerId,
-            position: finalPos,
+            position: snapSpot,
             hp: BUILDING_STATS.hub.hp,
             maxHp: BUILDING_STATS.hub.hp,
             state: 'idle'
