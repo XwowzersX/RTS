@@ -9,7 +9,7 @@ export const TICK_RATE = 10; // Updates per second
 
 export type ResourceType = 'wood' | 'stone' | 'iron' | 'ladders';
 export type UnitType = 'lumberjack' | 'miner' | 'knight' | 'archer' | 'builder';
-export type BuildingType = 'hub' | 'barracks' | 'iron_works' | 'factory' | 'wall';
+export type BuildingType = 'hub' | 'barracks' | 'iron_works' | 'factory' | 'wall' | 'watchtower';
 
 export const COSTS: Record<UnitType | BuildingType | 'iron_ingot' | 'ladder', Partial<Record<ResourceType, number>>> = {
   // Units
@@ -24,6 +24,7 @@ export const COSTS: Record<UnitType | BuildingType | 'iron_ingot' | 'ladder', Pa
   iron_works: { wood: 15, stone: 10 },
   factory: { wood: 10, stone: 10 },
   wall: { wood: 5, stone: 5 },
+  watchtower: { wood: 20, stone: 20, iron: 10 },
   // Production
   iron_ingot: { stone: 5 },
   ladder: { wood: 5 },
@@ -53,6 +54,7 @@ export const BUILDING_STATS: Record<BuildingType, { hp: number, size: number }> 
   iron_works: { hp: 300, size: 50 },
   factory: { hp: 300, size: 50 },
   wall: { hp: 500, size: 40 },
+  watchtower: { hp: 400, size: 40 },
 };
 
 // --- Game State Types (Not persisted in DB, but shared) ---
@@ -84,6 +86,7 @@ export interface PlayerState {
   color: string;
   resources: Record<ResourceType, number>;
   population: number;
+  researched: string[];
 }
 
 export interface GameState {

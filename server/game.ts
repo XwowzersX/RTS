@@ -77,7 +77,8 @@ export class Game {
       id: playerId,
       color,
       resources: { wood: 5, stone: 5, iron: 0, ladders: 0 },
-      population: 0
+      population: 0,
+      researched: [],
     };
 
     // Create Hub
@@ -140,6 +141,27 @@ export class Game {
       }
       
       this.handleEntityBehavior(entity);
+      
+      // Watchtower Automatic Attack
+      if (entity.type === 'watchtower' && entity.hp > 0) {
+        let nearestEnemy: any = null;
+        let minDist = 300; // Watchtower range
+        
+        for (const targetId in this.state.entities) {
+          const target = this.state.entities[targetId];
+          if (target.playerId !== entity.playerId && target.hp > 0) {
+            const dist = this.distance(entity.position, target.position);
+            if (dist < minDist) {
+              minDist = dist;
+              nearestEnemy = target;
+            }
+          }
+        }
+        
+        if (nearestEnemy) {
+          nearestEnemy.hp -= 1; // Basic damage per tick
+        }
+      }
     }
 
     this.onUpdate(this.state);
@@ -165,7 +187,7 @@ export class Game {
         
         let visible = false;
         for (const entity of entities) {
-          const visionRange = entity.type === 'archer' ? 300 : entity.type === 'hub' ? 400 : 200;
+          const visionRange = entity.type === 'archer' ? 300 : entity.type === 'hub' ? 400 : entity.type === 'watchtower' ? 500 : 200;
           const dx = worldX - entity.position.x;
           const dy = worldY - entity.position.y;
           if (dx*dx + dy*dy < visionRange*visionRange) {
@@ -303,6 +325,11 @@ export class Game {
                 this.state.players[entity.playerId].resources.iron += 1;
             } else if (item === 'ladder') {
                 this.state.players[entity.playerId].resources.ladders += 1;
+            } else if (item === 'speed_boost') {
+                if (!this.state.players[entity.playerId].researched) {
+                  this.state.players[entity.playerId].researched = [];
+                }
+                this.state.players[entity.playerId].researched.push('speed_boost');
             } else if (item) {
                 // Train unit
                 const id = randomUUID();
@@ -343,7 +370,11 @@ export class Game {
   }
 
   private moveTowards(entity: Entity, target: Position) {
-    const speed = (UNIT_STATS[entity.type as UnitType]?.speed || 1) * 3;
+    let speedMult = 1;
+    const player = this.state.players[entity.playerId];
+    if (player?.researched?.includes('speed_boost')) speedMult = 1.2;
+    
+    const speed = (UNIT_STATS[entity.type as UnitType]?.speed || 1) * 3 * speedMult;
     const dx = target.x - entity.position.x;
     const dy = target.y - entity.position.y;
     const dist = Math.sqrt(dx*dx + dy*dy);
@@ -498,7 +529,7 @@ export class Game {
         const { buildingId, unitType } = action.payload;
         const building = this.state.entities[buildingId];
         if (building && building.playerId === playerId) {
-             const cost = COSTS[unitType as keyof typeof COSTS];
+             const cost = unitType === 'speed_boost' ? { iron: 10, wood: 10 } : COSTS[unitType as keyof typeof COSTS];
              const player = this.state.players[playerId];
              
              let canAfford = true;

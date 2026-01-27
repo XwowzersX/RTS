@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { 
   Sword, Shield, Pickaxe, User, 
   Home, Factory, Hammer, Gavel, ArrowUp,
-  MousePointer2, Box, ChevronUp
+  MousePointer2, Box, ChevronUp, Eye
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -74,6 +74,13 @@ export function ActionGrid({
             onClick={() => onBuild('wall')} 
             active={isPlacementActive}
           />
+          <ActionButton 
+            icon={Eye} 
+            label="Watchtower" 
+            cost={COSTS.watchtower}
+            onClick={() => onBuild('watchtower')} 
+            active={isPlacementActive}
+          />
           <Button 
             variant="destructive" 
             className="col-span-2 h-16 flex flex-col gap-1 border-2 border-red-900/50 hover:border-red-500/50"
@@ -132,15 +139,25 @@ export function ActionGrid({
       );
     }
 
-    // Iron Works produces iron ingots
+    // Iron Works produces iron ingots & research
     if (entityType === 'iron_works') {
       return (
-        <ActionButton 
-          icon={Box} 
-          label="Iron Ingot" 
-          cost={COSTS.iron_ingot}
-          onClick={() => onTrain('iron_ingot')} 
-        />
+        <>
+          <ActionButton 
+            icon={Box} 
+            label="Iron Ingot" 
+            cost={COSTS.iron_ingot}
+            onClick={() => onTrain('iron_ingot')} 
+          />
+          {!gameState.players[playerId]?.researched?.includes('speed_boost') && (
+            <ActionButton 
+              icon={ArrowUp} 
+              label="Speed Research" 
+              cost={{ iron: 10, wood: 10 }}
+              onClick={() => onTrain('speed_boost')} 
+            />
+          )}
+        </>
       );
     }
 
