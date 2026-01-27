@@ -360,16 +360,18 @@ export class Game {
        
        // Special Hub Right-Click Snap Logic
        const clusters = (this.state as any).resourceClusters || [];
-       const snapSpot = clusters.find((center: Position) => this.distance(target, center) < 80);
+       const snapSpot = clusters.find((center: Position) => this.distance(target, center) < 120);
        
-       if (snapSpot) {
-         const hubsInSelection = entityIds.map((id: string) => this.state.entities[id]).filter((e: any) => e && e.type === 'hub' && e.playerId === playerId);
-         if (hubsInSelection.length > 0) {
+       const hubsInSelection = entityIds.map((id: string) => this.state.entities[id]).filter((e: any) => e && e.type === 'hub' && e.playerId === playerId);
+       
+       if (hubsInSelection.length > 0) {
+         if (snapSpot) {
            hubsInSelection.forEach((hub: any) => {
              hub.position = { ...snapSpot };
            });
-           return;
          }
+         // Even if no snapSpot, we return to prevent hubs from moving elsewhere
+         return;
        }
 
        console.log(`Action Move for ${entityIds.length} units to ${JSON.stringify(target)}`);
