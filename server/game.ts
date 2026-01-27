@@ -395,16 +395,34 @@ export class Game {
           const clusters = (this.state as any).resourceClusters || [];
           const isValidSpot = clusters.some((center: Position) => {
             const d = this.distance(position, center);
-            return d < 40; // Only exactly in the center of resources
+            return d < 60; // Slightly larger tolerance for snapping
           });
+          
           if (!isValidSpot) return;
+
+          // Find the exact cluster center to snap to
+          const snapSpot = clusters.find((center: Position) => this.distance(position, center) < 60);
+          const finalPos = snapSpot || position;
 
           // If hub already exists, move it instead of building new
           const existingHub = Object.values(this.state.entities).find(e => e.type === 'hub' && e.playerId === playerId);
           if (existingHub) {
-            existingHub.position = position;
+            existingHub.position = finalPos;
             return;
           }
+          
+          // Use snapped position for new hub too
+          const newHub = {
+            id: `hub-${playerId}-${Date.now()}`,
+            type: 'hub',
+            playerId,
+            position: finalPos,
+            hp: BUILDING_STATS.hub.hp,
+            maxHp: BUILDING_STATS.hub.hp,
+            state: 'idle'
+          };
+          this.state.entities[newHub.id] = newHub as any;
+          return;
         }
 
         if (!builderId) return;

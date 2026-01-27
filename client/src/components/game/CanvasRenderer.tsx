@@ -464,16 +464,28 @@ export function CanvasRenderer({
     const worldMouse = screenToWorld(mousePos.x, mousePos.y);
 
     clusters.forEach((center: Position) => {
-      const d = Math.sqrt(Math.pow(worldMouse.x - center.x, 2) + Math.pow(worldMouse.y - center.y, 2));
-      const inSpot = d < 40;
+      // Calculate distance to cluster center in world space
+      const dx = worldMouse.x - center.x;
+      const dy = worldMouse.y - center.y;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      const inSpot = d < 60;
       const hubSize = BUILDING_STATS.hub.size;
       
       ctx.save();
       ctx.translate(center.x, center.y);
       
       // Blue transparent square for valid hub spot
-      ctx.fillStyle = inSpot ? 'rgba(59, 130, 246, 0.4)' : 'rgba(59, 130, 246, 0.1)';
-      ctx.strokeStyle = 'rgba(59, 130, 246, 0.5)';
+      if (inSpot) {
+        ctx.fillStyle = 'rgba(59, 130, 246, 0.4)';
+        ctx.strokeStyle = 'rgba(59, 130, 246, 0.8)';
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = '#3b82f6';
+      } else {
+        ctx.fillStyle = 'rgba(59, 130, 246, 0.1)';
+        ctx.strokeStyle = 'rgba(59, 130, 246, 0.3)';
+        ctx.shadowBlur = 0;
+      }
+      
       ctx.lineWidth = 2;
       
       // Square indicator instead of ring
@@ -483,11 +495,11 @@ export function CanvasRenderer({
 
       if (inSpot) {
         // Tooltip
-        ctx.fillStyle = 'white';
-        ctx.font = 'bold 12px Rajdhani';
-        ctx.textAlign = 'center';
         ctx.shadowBlur = 10;
         ctx.shadowColor = 'black';
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 14px Rajdhani';
+        ctx.textAlign = 'center';
         ctx.fillText('MOVE HUB HERE', 0, -hubSize/2 - 20);
       }
       
