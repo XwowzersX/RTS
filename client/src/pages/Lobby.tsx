@@ -115,7 +115,7 @@ export default function Lobby() {
       </div>
 
       <div className="absolute bottom-8 text-xs text-white/20 font-mono">
-        V1.5.2, System Breakdown Update - © 2026 Iron & Stone Games
+        V1.6.2, Fog Of war update 1.2.5 | © 2026 Iron & Stone
       </div>
     </div>
   );
