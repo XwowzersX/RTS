@@ -325,11 +325,13 @@ export class Game {
                 this.state.players[entity.playerId].resources.iron += 1;
             } else if (item === 'ladder') {
                 this.state.players[entity.playerId].resources.ladders += 1;
-            } else if (item === 'speed_boost') {
+            } else if ((item as string) === 'speed_boost') {
                 if (!this.state.players[entity.playerId].researched) {
                   this.state.players[entity.playerId].researched = [];
                 }
-                this.state.players[entity.playerId].researched.push('speed_boost');
+                if (!this.state.players[entity.playerId].researched.includes('speed_boost')) {
+                  this.state.players[entity.playerId].researched.push('speed_boost');
+                }
             } else if (item) {
                 // Train unit
                 const id = randomUUID();

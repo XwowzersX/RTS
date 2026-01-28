@@ -22,8 +22,9 @@ export function ActionGrid({
   onTrain, 
   onBuild,
   onStop,
-  isPlacementActive
-}: ActionGridProps) {
+  isPlacementActive,
+  playerId
+}: ActionGridProps & { playerId: string | null }) {
   
   // Nothing selected
   if (selection.length === 0) {

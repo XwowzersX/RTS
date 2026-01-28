@@ -279,6 +279,7 @@ export default function Game() {
             onBuild={setPlacementMode}
             onStop={() => {}}
             isPlacementActive={!!placementMode}
+            playerId={joinMutation.data?.playerId ?? null}
           />
         </div>
 
