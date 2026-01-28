@@ -40,7 +40,7 @@ export function useGameControls({ sendMessage, playerId, gameState }: UseGameCon
     playSound('gather');
   }, [selection, sendMessage]);
 
-  const buildStructure = useCallback((position: Position) => {
+  const buildStructure = useCallback((position: Position, keepPlacementMode: boolean = false) => {
     if (!placementMode) return;
     
     // Find a builder in the current selection
@@ -55,7 +55,9 @@ export function useGameControls({ sendMessage, playerId, gameState }: UseGameCon
       builderId
     });
     playSound('build');
-    setPlacementMode(null);
+    if (!keepPlacementMode) {
+      setPlacementMode(null);
+    }
   }, [placementMode, selection, gameState, sendMessage]);
 
   const trainUnit = useCallback((buildingId: string, unitType: UnitType | 'iron_ingot' | 'ladder') => {
