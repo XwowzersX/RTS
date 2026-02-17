@@ -154,7 +154,7 @@ export function ActionGrid({
             <ActionButton 
               icon={ArrowUp} 
               label="Speed Research" 
-              cost={{ iron: 10, wood: 10 }}
+              cost={{ iron: 50, wood: 50 }}
               onClick={() => onTrain('speed_boost')} 
             />
           )}
