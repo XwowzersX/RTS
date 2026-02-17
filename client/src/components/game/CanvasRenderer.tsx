@@ -530,6 +530,34 @@ export function CanvasRenderer({
       let finalPos = worldMouse;
       let isValidHubPlacement = true;
 
+      // Draw Wall Preview Line
+      if (placementMode === 'wall' && wallStart) {
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.globalAlpha = 0.4;
+        ctx.setLineDash([5, 5]);
+        ctx.lineWidth = 2;
+        
+        ctx.beginPath();
+        ctx.moveTo(wallStart.x, wallStart.y);
+        ctx.lineTo(worldMouse.x, worldMouse.y);
+        ctx.stroke();
+
+        // Preview wall segments
+        const dist = Math.hypot(worldMouse.x - wallStart.x, worldMouse.y - wallStart.y);
+        const wallSize = 40;
+        const steps = Math.floor(dist / wallSize);
+        for (let i = 0; i <= steps; i++) {
+          const t = steps === 0 ? 0 : i / steps;
+          const pos = {
+            x: wallStart.x + (worldMouse.x - wallStart.x) * t,
+            y: wallStart.y + (worldMouse.y - wallStart.y) * t
+          };
+          ctx.strokeRect(pos.x - wallSize/2, pos.y - wallSize/2, wallSize, wallSize);
+        }
+        ctx.restore();
+      }
+
       if (placementMode === 'hub') {
         const snapSpot = clusters.find((center: Position) => {
           const dx = worldMouse.x - center.x;
@@ -576,57 +604,23 @@ export function CanvasRenderer({
 
   }, [gameState, playerId, selection, offset, selectionBox]);
 
+  const [wallStart, setWallStart] = useState<Position | null>(null);
+
   // Event Handlers
   const handleMouseDown = (e: React.MouseEvent) => {
-    // 0 = Left Click, 2 = Right Click
-    if (e.button === 0 && !e.altKey) { // Left Click (Normal)
-      const worldPos = screenToWorld(e.clientX, e.clientY);
+    const worldPos = screenToWorld(e.clientX, e.clientY);
 
-      // Hub Relocation Spot Click
-      const clusters = (gameState as any).resourceClusters || [];
-      const clickedSpot = clusters.find((center: any) => {
-        const d = Math.sqrt(Math.pow(worldPos.x - center.x, 2) + Math.pow(worldPos.y - center.y, 2));
-        return d < 40;
-      });
-
-      if (clickedSpot) {
-        onBuild(clickedSpot); // Snap to exact center
-        return;
-      }
-
-      if (placementMode) {
-        onBuild(worldPos);
-        return;
-      }
-
-      // Start drag select or pan
-      setDragStart({ x: e.clientX, y: e.clientY });
-      
-      setSelectionBox({ 
-        start: { x: e.clientX, y: e.clientY }, 
-        current: { x: e.clientX, y: e.clientY } 
-      });
-      return;
-    }
-
-    if (e.button === 2) { // Right Click = Action
+    // Right Click = Start Point 1 of Wall or Action
+    if (e.button === 2) {
       e.preventDefault();
       if (!gameState) return;
-      const worldPos = screenToWorld(e.clientX, e.clientY);
       
-      // Wall placement support for Right Click
       if (placementMode === 'wall') {
-        onBuild(worldPos);
-        setDragStart({ x: e.clientX, y: e.clientY });
+        setWallStart(worldPos);
         return;
       }
       
-      // Check if clicked an enemy or resource
-      // Simple collision check (optimize with spatial hash later if needed)
-      let targetId: string | undefined;
-      let actionType: 'attack' | 'gather' | 'move' = 'move';
-
-      // Check resources
+      // Normal Right Click Action (Move/Attack/Gather)
       const resource = gameState.resources.find(r => 
         Math.hypot(r.position.x - worldPos.x, r.position.y - worldPos.y) < 20
       );
@@ -635,7 +629,6 @@ export function CanvasRenderer({
         return;
       }
 
-      // Check entities
       const clickedEntity = Object.values(gameState.entities).find(ent => {
         const size = BUILDING_STATS[ent.type as BuildingType]?.size || ENTITY_RADIUS * 2;
         return Math.hypot(ent.position.x - worldPos.x, ent.position.y - worldPos.y) < size/2;
@@ -649,37 +642,55 @@ export function CanvasRenderer({
       return;
     }
 
-    if (e.button === 0 && e.altKey) { // Alt + Left Click = Pan
-      e.preventDefault();
-      setIsPanning(true);
-      setDragStart({ x: e.clientX, y: e.clientY });
-    } else if (e.button === 1) { // Middle Click Pan
-      e.preventDefault();
-      setIsPanning(true);
-      setDragStart({ x: e.clientX, y: e.clientY });
-    }
-    
-    if (e.button === 0 && !e.altKey) { // Left Click (Normal)
-      if (placementMode) {
-        const worldPos = screenToWorld(e.clientX, e.clientY);
+    // Left Click = Point 2 of Wall or Select/Placement
+    if (e.button === 0 && !e.altKey) {
+      if (placementMode === 'wall' && wallStart) {
+        // Point 2: Draw the line
+        const start = wallStart;
+        const end = worldPos;
+        const dist = Math.hypot(end.x - start.x, end.y - start.y);
+        const wallSize = 40;
+        const steps = Math.floor(dist / wallSize);
+        
+        for (let i = 0; i <= steps; i++) {
+          const t = steps === 0 ? 0 : i / steps;
+          const pos = {
+            x: start.x + (end.x - start.x) * t,
+            y: start.y + (end.y - start.y) * t
+          };
+          onBuild(pos);
+        }
+        setWallStart(null);
+        return;
+      }
+
+      if (placementMode && placementMode !== 'wall') {
         onBuild(worldPos);
         return;
       }
 
-      // Start drag select or pan
-      // For now, let's say Space+Drag = Pan, or Middle Mouse = Pan
-      // Default left drag = Select
+      // Hub Relocation Spot Click
+      const clusters = (gameState as any).resourceClusters || [];
+      const clickedSpot = clusters.find((center: any) => {
+        const d = Math.sqrt(Math.pow(worldPos.x - center.x, 2) + Math.pow(worldPos.y - center.y, 2));
+        return d < 40;
+      });
+
+      if (clickedSpot) {
+        onBuild(clickedSpot);
+        return;
+      }
+
+      // Drag select
       setDragStart({ x: e.clientX, y: e.clientY });
-      
-      // If clicking strictly on an entity, select it immediately
-      // Logic handled in MouseUp for single click, Box for drag
       setSelectionBox({ 
         start: { x: e.clientX, y: e.clientY }, 
         current: { x: e.clientX, y: e.clientY } 
       });
+      return;
     }
-    
-    if (e.button === 1) { // Middle Click Pan
+
+    if (e.button === 1 || (e.button === 0 && e.altKey)) {
       e.preventDefault();
       setIsPanning(true);
       setDragStart({ x: e.clientX, y: e.clientY });
@@ -687,6 +698,8 @@ export function CanvasRenderer({
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
+    setMousePos({ x: e.clientX, y: e.clientY });
+
     if (isPanning && dragStart) {
       setOffset(prev => ({
         x: prev.x - (e.clientX - dragStart.x) / zoom,
@@ -696,20 +709,6 @@ export function CanvasRenderer({
     } else if (selectionBox) {
       setSelectionBox(prev => prev ? { ...prev, current: { x: e.clientX, y: e.clientY } } : null);
     }
-    
-    // Auto-wall placement logic
-    if (placementMode === 'wall' && dragStart) {
-      const worldPos = screenToWorld(mousePos.x, mousePos.y);
-      const startWorld = screenToWorld(dragStart.x, dragStart.y);
-      const dist = Math.hypot(worldPos.x - startWorld.x, worldPos.y - startWorld.y);
-      
-      if (dist > 45) { // Minimum distance for next wall segment
-        onBuild(worldPos);
-        setDragStart({ x: mousePos.x, y: mousePos.y });
-      }
-    }
-
-    setMousePos({ x: e.clientX, y: e.clientY });
   };
 
   const handleMouseUp = (e: React.MouseEvent) => {
@@ -792,7 +791,7 @@ export function CanvasRenderer({
           </div>
           {placementMode === 'wall' && (
             <div className="bg-black/60 text-gray-300 px-3 py-1 rounded-full text-xs border border-white/10">
-              Right Click & Drag to chain walls
+              {wallStart ? "Left Click to Finish Line" : "Right Click to Start Line"}
             </div>
           )}
         </div>

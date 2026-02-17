@@ -43,6 +43,14 @@ export function useGameControls({ sendMessage, playerId, gameState }: UseGameCon
   const buildStructure = useCallback((position: Position, keepPlacementMode: boolean = false) => {
     if (!placementMode) return;
     
+    // Special handling for wall line drawing
+    if (placementMode === 'wall' && !keepPlacementMode) {
+      // This is called for the second point of the wall
+      // The logic for calculating the line will be handled in CanvasRenderer
+      // and it will call this multiple times or we'll handle it here.
+      // For now, let's keep it simple and just build at the position.
+    }
+
     // Find a builder in the current selection
     const builderId = selection.find(id => {
       const e = gameState?.entities?.[id];
