@@ -142,6 +142,7 @@ export function ActionGrid({
 
     // Iron Works produces iron ingots & research
     if (entityType === 'iron_works') {
+      const player = playerId ? gameState.players[playerId] : null;
       return (
         <>
           <ActionButton 
@@ -150,7 +151,7 @@ export function ActionGrid({
             cost={COSTS.iron_ingot}
             onClick={() => onTrain('iron_ingot')} 
           />
-          {!gameState.players[playerId]?.researched?.includes('speed_boost') && (
+          {!player?.researched?.includes('speed_boost') && (
             <ActionButton 
               icon={ArrowUp} 
               label="Speed Research" 
