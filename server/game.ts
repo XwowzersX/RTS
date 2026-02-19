@@ -136,30 +136,56 @@ export class Game {
           this.state.winner = Object.keys(this.state.players).find(id => id !== entity.playerId);
           this.stop();
         }
+        
+        // Release garrisoned units if bunker destroyed
+        if (entity.type === 'bunker') {
+          const gIds = (entity as any).garrisonedIds || [];
+          gIds.forEach((id: string) => {
+            const unit = this.state.entities[id];
+            if (unit) {
+              unit.state = 'idle';
+              delete (unit as any).bunkerId;
+            }
+          });
+        }
+
         delete this.state.entities[entityId];
         continue;
       }
       
       this.handleEntityBehavior(entity);
       
-      // Watchtower Automatic Attack
-      if (entity.type === 'watchtower' && entity.hp > 0) {
+      // Watchtower/Bunker Automatic Attack
+      if ((entity.type === 'watchtower' || entity.type === 'bunker') && entity.hp > 0) {
         let nearestEnemy: any = null;
-        let minDist = 300; // Watchtower range
+        let range = entity.type === 'watchtower' ? 300 : 250;
+        let minDist = range;
         
-        for (const targetId in this.state.entities) {
-          const target = this.state.entities[targetId];
-          if (target.playerId !== entity.playerId && target.hp > 0) {
-            const dist = this.distance(entity.position, target.position);
-            if (dist < minDist) {
-              minDist = dist;
-              nearestEnemy = target;
+        // Bunkers only attack if they have archers inside
+        if (entity.type === 'bunker') {
+          const archerCount = (entity as any).garrisonedIds?.length || 0;
+          if (archerCount === 0) minDist = -1; // Don't attack
+        }
+
+        if (minDist > 0) {
+          for (const targetId in this.state.entities) {
+            const target = this.state.entities[targetId];
+            if (target.playerId !== entity.playerId && target.hp > 0) {
+              const dist = this.distance(entity.position, target.position);
+              if (dist < minDist) {
+                minDist = dist;
+                nearestEnemy = target;
+              }
             }
           }
-        }
-        
-        if (nearestEnemy) {
-          nearestEnemy.hp -= 1; // Basic damage per tick
+          
+          if (nearestEnemy) {
+            let damage = 1;
+            if (entity.type === 'bunker') {
+              damage = ((entity as any).garrisonedIds?.length || 0) * 2;
+            }
+            nearestEnemy.hp -= damage;
+          }
         }
       }
     }
@@ -255,6 +281,18 @@ export class Game {
       const hub = Object.values(this.state.entities).find(e => e.type === 'hub' && e.playerId === entity.playerId);
       if (hub) {
         const dist = this.distance(entity.position, hub.position);
+        
+        // Garrisoned units skip behavior
+        let isGarrisoned = false;
+        for (const eId in this.state.entities) {
+          const bunker = this.state.entities[eId];
+          if (bunker.type === 'bunker' && (bunker as any).garrisonedIds?.includes(entity.id)) {
+            isGarrisoned = true;
+            break;
+          }
+        }
+        if (isGarrisoned) return;
+
         if (dist < 50) {
           const type = entity.type === 'lumberjack' ? 'wood' : 'stone';
           this.state.players[entity.playerId].resources[type] += 1;
@@ -273,38 +311,33 @@ export class Game {
         if (stats) {
           const dist = this.distance(entity.position, target.position);
           
-          // Ladder climbing mechanic
-          if (target.type === 'wall' && this.state.players[entity.playerId].resources.ladders > 0 && !entity.isClimbing) {
-            if (dist < 40) {
-              this.state.players[entity.playerId].resources.ladders -= 1;
-              entity.isClimbing = true;
-              (entity as any).climbTimer = 10000; // 10 seconds
-            }
-          }
-
-          if (entity.isClimbing) {
-            (entity as any).climbTimer = ((entity as any).climbTimer || 0) - 100;
-            if ((entity as any).climbTimer <= 0) {
-              entity.isClimbing = false;
-              delete (entity as any).climbTimer;
-            }
-          }
-
-          if (dist <= stats.range + 10) { 
-             if (entity.isClimbing && target.type === 'wall') {
-                this.moveTowards(entity, (entity as any).destination || { x: target.position.x + 40, y: target.position.y + 40 });
+          // Bunker Garrison Check
+          const bunkerId = (entity as any).bunkerId;
+          if (bunkerId) {
+             const bunker = this.state.entities[bunkerId];
+             if (bunker && bunker.type === 'bunker' && bunker.hp > 0) {
+               if (dist < 10) {
+                  if (!((bunker as any).garrisonedIds)) (bunker as any).garrisonedIds = [];
+                  if (!(bunker as any).garrisonedIds.includes(entity.id)) {
+                    (bunker as any).garrisonedIds.push(entity.id);
+                  }
+                  return; // Entity is now "hidden" in bunker
+               }
              } else {
-                target.hp -= stats.attack * 0.2; 
+               delete (entity as any).bunkerId;
              }
-          } else {
-             this.moveTowards(entity, target.position);
           }
-        }
-      } else {
-        entity.state = 'idle';
-        entity.isClimbing = false;
-      }
-    }
+
+          // Damage logic (simplified for archers in bunkers)
+          let isGarrisoned = false;
+          for (const eId in this.state.entities) {
+            const bunker = this.state.entities[eId];
+            if (bunker.type === 'bunker' && (bunker as any).garrisonedIds?.includes(entity.id)) {
+              isGarrisoned = true;
+              break;
+            }
+          }
+          if (isGarrisoned) return; // Garrisoned units don't move/attack normally
 
     // Production logic
     if (entity.state === 'producing' || (entity.productionQueue && entity.productionQueue.length > 0)) {
@@ -427,6 +460,27 @@ export class Game {
     if (action.type === 'action_move') {
        const { entityIds, target } = action.payload;
        
+       // Bunker Garrison Logic
+       const clickedBunker = Object.values(this.state.entities).find(e => 
+         e.type === 'bunker' && 
+         e.playerId === playerId && 
+         this.distance(target, e.position) < 30
+       );
+
+       if (clickedBunker) {
+         entityIds.forEach((id: string) => {
+           const e = this.state.entities[id];
+           if (e && e.playerId === playerId && e.type === 'archer') {
+             if (!((clickedBunker as any).garrisonedIds)) (clickedBunker as any).garrisonedIds = [];
+             if ((clickedBunker as any).garrisonedIds.length < 5) {
+               e.state = 'moving';
+               (e as any).destination = { ...clickedBunker.position };
+               (e as any).bunkerId = clickedBunker.id;
+             }
+           }
+         });
+       }
+       
        // Special Hub Right-Click Snap Logic
        const clusters = (this.state as any).resourceClusters || [];
        const snapSpot = clusters.find((center: Position) => this.distance(target, center) < 120);
@@ -532,7 +586,21 @@ export class Game {
         const { buildingId, unitType } = action.payload;
         const building = this.state.entities[buildingId];
         if (building && building.playerId === playerId) {
-             const cost = unitType === 'speed_boost' ? { iron: 10, wood: 10 } : COSTS[unitType as keyof typeof COSTS];
+             if (unitType === 'ungarrison' && building.type === 'bunker') {
+               const gIds = (building as any).garrisonedIds || [];
+               gIds.forEach((id: string) => {
+                 const unit = this.state.entities[id];
+                 if (unit) {
+                   unit.state = 'idle';
+                   unit.position = { x: building.position.x + 60, y: building.position.y + 60 };
+                   delete (unit as any).bunkerId;
+                 }
+               });
+               (building as any).garrisonedIds = [];
+               return;
+             }
+
+             const cost = unitType === 'speed_boost' ? { iron: 50, wood: 50 } : COSTS[unitType as keyof typeof COSTS];
              const player = this.state.players[playerId];
              
              let canAfford = true;

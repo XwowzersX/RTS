@@ -82,6 +82,13 @@ export function ActionGrid({
             onClick={() => onBuild('watchtower')} 
             active={isPlacementActive}
           />
+          <ActionButton 
+            icon={Shield} 
+            label="Bunker" 
+            cost={COSTS.bunker}
+            onClick={() => onBuild('bunker')} 
+            active={isPlacementActive}
+          />
           <Button 
             variant="destructive" 
             className="col-span-2 h-16 flex flex-col gap-1 border-2 border-red-900/50 hover:border-red-500/50"
@@ -163,15 +170,17 @@ export function ActionGrid({
       );
     }
 
-    // Factory produces ladders
-    if (entityType === 'factory') {
+    // Bunker actions
+    if (entityType === 'bunker') {
       return (
-        <ActionButton 
-          icon={ChevronUp} 
-          label="Ladder" 
-          cost={COSTS.ladder}
-          onClick={() => onTrain('ladder')} 
-        />
+        <Button 
+          variant="outline"
+          className="col-span-4 h-16 flex flex-col gap-1 border-2 border-amber-900/50 hover:border-amber-500/50"
+          onClick={() => onTrain('ungarrison')} 
+        >
+          <User className="w-5 h-5" />
+          <span className="text-xs uppercase tracking-wider">Release Archers</span>
+        </Button>
       );
     }
 

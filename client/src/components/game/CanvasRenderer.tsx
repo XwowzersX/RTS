@@ -293,6 +293,17 @@ export function CanvasRenderer({
 
     // 3. Entities (Units & Buildings)
     Object.values(gameState.entities).forEach(entity => {
+      // Don't render garrisoned units
+      let isGarrisoned = false;
+      for (const eId in gameState.entities) {
+        const bunker = gameState.entities[eId];
+        if (bunker.type === 'bunker' && (bunker as any).garrisonedIds?.includes(entity.id)) {
+          isGarrisoned = true;
+          break;
+        }
+      }
+      if (isGarrisoned) return;
+
       const isSelected = selection.includes(entity.id);
       const isMine = entity.playerId === playerId;
       const owner = gameState.players[entity.playerId];
@@ -318,7 +329,7 @@ export function CanvasRenderer({
       ctx.shadowBlur = 10;
       ctx.shadowColor = 'rgba(0,0,0,0.5)';
       
-      if (['hub', 'barracks', 'iron_works', 'factory', 'wall', 'watchtower'].includes(entity.type)) {
+      if (['hub', 'barracks', 'iron_works', 'factory', 'wall', 'watchtower', 'bunker'].includes(entity.type)) {
         const size = BUILDING_STATS[entity.type as BuildingType].size;
         
         // Drop Shadow
@@ -364,6 +375,17 @@ export function CanvasRenderer({
         ctx.fillRect(-size/3, size/6, size/10, size/10);
         ctx.fillRect(size/6, size/6, size/10, size/10);
         ctx.globalAlpha = 1.0;
+
+        // Bunker garrison indicators
+        if (entity.type === 'bunker') {
+          const count = (entity as any).garrisonedIds?.length || 0;
+          ctx.fillStyle = '#ef4444';
+          for (let i = 0; i < count; i++) {
+            ctx.beginPath();
+            ctx.arc(-size/2 + 10 + i * 8, -size/2 + 10, 3, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
         
         // Emblems/Trim
         ctx.strokeStyle = 'rgba(255,255,255,0.2)';
