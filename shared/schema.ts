@@ -25,7 +25,7 @@ export const COSTS: Record<UnitType | BuildingType | 'iron_ingot' | 'ladder' | '
   factory: { wood: 10, stone: 10 },
   wall: { wood: 5, stone: 5 },
   watchtower: { wood: 20, stone: 20, iron: 10 },
-  bunker: { wood: 3, stone: 3, iron: 1 },
+  bunker: { wood: 30, stone: 30, iron: 10 },
   // Production
   iron_ingot: { stone: 5 },
   ladder: { wood: 5 },
