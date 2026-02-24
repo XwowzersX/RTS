@@ -7,11 +7,11 @@ export const MAP_WIDTH = 4000;
 export const MAP_HEIGHT = 4000;
 export const TICK_RATE = 10; // Updates per second
 
-export type ResourceType = 'wood' | 'stone' | 'iron' | 'ladders';
+export type ResourceType = 'wood' | 'stone' | 'iron';
 export type UnitType = 'lumberjack' | 'miner' | 'knight' | 'archer' | 'builder';
-export type BuildingType = 'hub' | 'barracks' | 'iron_works' | 'factory' | 'wall' | 'watchtower' | 'bunker';
+export type BuildingType = 'hub' | 'barracks' | 'iron_works' | 'factory' | 'watchtower' | 'bunker';
 
-export const COSTS: Record<UnitType | BuildingType | 'iron_ingot' | 'ladder' | 'speed_boost', Partial<Record<ResourceType, number>>> = {
+export const COSTS: Record<UnitType | BuildingType | 'iron_ingot' | 'speed_boost', Partial<Record<ResourceType, number>>> = {
   // Units
   lumberjack: { wood: 3, stone: 5 },
   miner: { wood: 5, stone: 2 },
@@ -23,18 +23,15 @@ export const COSTS: Record<UnitType | BuildingType | 'iron_ingot' | 'ladder' | '
   barracks: { wood: 10, stone: 15 },
   iron_works: { wood: 15, stone: 10 },
   factory: { wood: 10, stone: 10 },
-  wall: { wood: 5, stone: 5 },
   watchtower: { wood: 20, stone: 20, iron: 10 },
   bunker: { wood: 30, stone: 30, iron: 10 },
   // Production
   iron_ingot: { stone: 5 },
-  ladder: { wood: 5 },
   speed_boost: { wood: 50, iron: 50 },
 };
 
 export const PRODUCTION_TIME: Record<string, number> = {
   iron_ingot: 5000,
-  ladder: 5000,
   knight: 10000,
   archer: 10000,
   miner: 3000,
@@ -55,7 +52,6 @@ export const BUILDING_STATS: Record<BuildingType, { hp: number, size: number }> 
   barracks: { hp: 300, size: 50 },
   iron_works: { hp: 300, size: 50 },
   factory: { hp: 300, size: 50 },
-  wall: { hp: 500, size: 40 },
   watchtower: { hp: 400, size: 40 },
   bunker: { hp: 600, size: 50 },
 };
@@ -79,9 +75,8 @@ export interface Entity {
   targetPosition?: Position;
   buildProgress?: number;
   buildType?: BuildingType;
-  productionQueue?: (UnitType | 'iron_ingot' | 'ladder')[];
+  productionQueue?: (UnitType | 'iron_ingot')[];
   productionTimer?: number;
-  isClimbing?: boolean;
 }
 
 export interface PlayerState {

@@ -329,7 +329,7 @@ export function CanvasRenderer({
       ctx.shadowBlur = 10;
       ctx.shadowColor = 'rgba(0,0,0,0.5)';
       
-      if (['hub', 'barracks', 'iron_works', 'factory', 'wall', 'watchtower', 'bunker'].includes(entity.type)) {
+      if (['hub', 'barracks', 'iron_works', 'factory', 'watchtower', 'bunker'].includes(entity.type)) {
         const size = BUILDING_STATS[entity.type as BuildingType].size;
         
         // Drop Shadow
@@ -340,23 +340,6 @@ export function CanvasRenderer({
         // Base structure
         ctx.fillStyle = '#1e293b'; // Deep slate base
         ctx.fillRect(-size/2, -size/2, size, size);
-        
-        // Wall connection visuals
-        if (entity.type === 'wall') {
-          ctx.strokeStyle = color;
-          ctx.lineWidth = 4;
-          Object.values(gameState.entities).forEach(other => {
-            if (other.type === 'wall' && other.id !== entity.id && other.playerId === entity.playerId) {
-              const d = Math.hypot(other.position.x - entity.position.x, other.position.y - entity.position.y);
-              if (d < 60) {
-                ctx.beginPath();
-                ctx.moveTo(0, 0);
-                ctx.lineTo(other.position.x - entity.position.x, other.position.y - entity.position.y);
-                ctx.stroke();
-              }
-            }
-          });
-        }
         
         // Roof/Feature color
         ctx.shadowBlur = 0;
@@ -552,34 +535,6 @@ export function CanvasRenderer({
       let finalPos = worldMouse;
       let isValidHubPlacement = true;
 
-      // Draw Wall Preview Line
-      if (placementMode === 'wall' && wallStart) {
-        ctx.save();
-        ctx.strokeStyle = color;
-        ctx.globalAlpha = 0.4;
-        ctx.setLineDash([5, 5]);
-        ctx.lineWidth = 2;
-        
-        ctx.beginPath();
-        ctx.moveTo(wallStart.x, wallStart.y);
-        ctx.lineTo(worldMouse.x, worldMouse.y);
-        ctx.stroke();
-
-        // Preview wall segments
-        const dist = Math.hypot(worldMouse.x - wallStart.x, worldMouse.y - wallStart.y);
-        const wallSize = 40;
-        const steps = Math.floor(dist / wallSize);
-        for (let i = 0; i <= steps; i++) {
-          const t = steps === 0 ? 0 : i / steps;
-          const pos = {
-            x: wallStart.x + (worldMouse.x - wallStart.x) * t,
-            y: wallStart.y + (worldMouse.y - wallStart.y) * t
-          };
-          ctx.strokeRect(pos.x - wallSize/2, pos.y - wallSize/2, wallSize, wallSize);
-        }
-        ctx.restore();
-      }
-
       if (placementMode === 'hub') {
         const snapSpot = clusters.find((center: Position) => {
           const dx = worldMouse.x - center.x;
@@ -605,42 +560,20 @@ export function CanvasRenderer({
         ctx.lineWidth = 2;
         ctx.strokeRect(-size/2, -size/2, size, size);
         
-        // Connection preview for walls
-        if (placementMode === 'wall') {
-          Object.values(gameState.entities).forEach(other => {
-            if (other.type === 'wall' && other.playerId === playerId) {
-              const d = Math.hypot(other.position.x - finalPos.x, other.position.y - finalPos.y);
-              if (d < 60) {
-                ctx.beginPath();
-                ctx.moveTo(0, 0);
-                ctx.lineTo(other.position.x - finalPos.x, other.position.y - finalPos.y);
-                ctx.stroke();
-              }
-            }
-          });
-        }
-        
         ctx.restore();
       }
     }
 
   }, [gameState, playerId, selection, offset, selectionBox]);
 
-  const [wallStart, setWallStart] = useState<Position | null>(null);
-
   // Event Handlers
   const handleMouseDown = (e: React.MouseEvent) => {
     const worldPos = screenToWorld(e.clientX, e.clientY);
 
-    // Right Click = Start Point 1 of Wall or Action
+    // Right Click = Action
     if (e.button === 2) {
       e.preventDefault();
       if (!gameState) return;
-      
-      if (placementMode === 'wall') {
-        setWallStart(worldPos);
-        return;
-      }
       
       // Normal Right Click Action (Move/Attack/Gather)
       const resource = gameState.resources.find(r => 
@@ -664,29 +597,9 @@ export function CanvasRenderer({
       return;
     }
 
-    // Left Click = Point 2 of Wall or Select/Placement
+    // Left Click = Select/Placement
     if (e.button === 0 && !e.altKey) {
-      if (placementMode === 'wall' && wallStart) {
-        // Point 2: Draw the line
-        const start = wallStart;
-        const end = worldPos;
-        const dist = Math.hypot(end.x - start.x, end.y - start.y);
-        const wallSize = 40;
-        const steps = Math.floor(dist / wallSize);
-        
-        for (let i = 0; i <= steps; i++) {
-          const t = steps === 0 ? 0 : i / steps;
-          const pos = {
-            x: start.x + (end.x - start.x) * t,
-            y: start.y + (end.y - start.y) * t
-          };
-          onBuild(pos);
-        }
-        setWallStart(null);
-        return;
-      }
-
-      if (placementMode && placementMode !== 'wall') {
+      if (placementMode) {
         onBuild(worldPos);
         return;
       }

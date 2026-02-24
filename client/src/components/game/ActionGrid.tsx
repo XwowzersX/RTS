@@ -69,13 +69,6 @@ export function ActionGrid({
             active={isPlacementActive}
           />
           <ActionButton 
-            icon={ArrowUp} 
-            label="Wall" 
-            cost={COSTS.wall}
-            onClick={() => onBuild('wall')} 
-            active={isPlacementActive}
-          />
-          <ActionButton 
             icon={Eye} 
             label="Watchtower" 
             cost={COSTS.watchtower}

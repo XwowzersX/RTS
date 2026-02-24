@@ -71,8 +71,6 @@ export function TutorialModal() {
               <ul className="list-disc list-inside text-sm text-gray-400 space-y-1">
                 <li><span className="text-white font-bold">Knights:</span> High health, melee powerhouses.</li>
                 <li><span className="text-white font-bold">Archers:</span> Long-range support units.</li>
-                <li><span className="text-white font-bold">Walls:</span> Defensive structures that block all ground movement.</li>
-                <li><span className="text-white font-bold">Ladders:</span> Produced in the Factory. Knights use them to scale enemy walls!</li>
               </ul>
             </section>
 

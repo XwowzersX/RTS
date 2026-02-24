@@ -76,7 +76,7 @@ export class Game {
     this.state.players[playerId] = {
       id: playerId,
       color,
-      resources: { wood: 5, stone: 5, iron: 0, ladders: 0 },
+      resources: { wood: 50, stone: 30, iron: 0 },
       population: 0,
       researched: [],
     };
@@ -331,36 +331,14 @@ export class Game {
           }
           if (isGarrisoned) return; // Garrisoned units don't move/attack normally
 
-          // Ladder climbing mechanic
-          if (target.type === 'wall' && this.state.players[entity.playerId].resources.ladders > 0 && !entity.isClimbing) {
-            if (dist < 40) {
-              this.state.players[entity.playerId].resources.ladders -= 1;
-              entity.isClimbing = true;
-              (entity as any).climbTimer = 10000; // 10 seconds
-            }
-          }
-
-          if (entity.isClimbing) {
-            (entity as any).climbTimer = ((entity as any).climbTimer || 0) - 100;
-            if ((entity as any).climbTimer <= 0) {
-              entity.isClimbing = false;
-              delete (entity as any).climbTimer;
-            }
-          }
-
           if (dist <= stats.range + 10) { 
-             if (entity.isClimbing && target.type === 'wall') {
-                this.moveTowards(entity, (entity as any).destination || { x: target.position.x + 40, y: target.position.y + 40 });
-             } else {
-                target.hp -= stats.attack * 0.2; 
-             }
+             target.hp -= stats.attack * 0.2; 
           } else {
              this.moveTowards(entity, target.position);
           }
         }
       } else {
         entity.state = 'idle';
-        entity.isClimbing = false;
       }
     }
 
@@ -381,8 +359,6 @@ export class Game {
             
             if (item === 'iron_ingot') {
                 this.state.players[entity.playerId].resources.iron += 1;
-            } else if (item === 'ladder') {
-                this.state.players[entity.playerId].resources.ladders += 1;
             } else if ((item as string) === 'speed_boost') {
                 const player = this.state.players[entity.playerId];
                 if (!player.researched) {
@@ -444,32 +420,8 @@ export class Game {
       const nextX = entity.position.x + (dx / dist) * speed;
       const nextY = entity.position.y + (dy / dist) * speed;
 
-      // Wall collision check
-      let collision = false;
-      if (!entity.isClimbing) {
-        for (const eId in this.state.entities) {
-          const e = this.state.entities[eId];
-          if (e.type === 'wall' && e.hp > 0) {
-            const wallSize = BUILDING_STATS.wall.size;
-            const distToWall = Math.sqrt(Math.pow(e.position.x - nextX, 2) + Math.pow(e.position.y - nextY, 2));
-            if (distToWall < (wallSize / 2 + 10)) {
-              collision = true;
-              break;
-            }
-          }
-        }
-      }
-
-      if (!collision) {
-        entity.position.x = nextX;
-        entity.position.y = nextY;
-      } else {
-        // If it's a worker gathering, they might get stuck, but for now just stop
-        if (entity.state === 'moving') {
-          entity.state = 'idle';
-          delete (entity as any).destination;
-        }
-      }
+      entity.position.x = nextX;
+      entity.position.y = nextY;
     } else {
       entity.position.x = target.x;
       entity.position.y = target.y;
