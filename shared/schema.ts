@@ -8,7 +8,7 @@ export const MAP_HEIGHT = 4000;
 export const TICK_RATE = 10; // Updates per second
 
 export type ResourceType = 'wood' | 'stone' | 'iron';
-export type UnitType = 'lumberjack' | 'miner' | 'knight' | 'archer' | 'builder';
+export type UnitType = 'lumberjack' | 'miner' | 'knight' | 'archer' | 'builder' | 'firebird';
 export type BuildingType = 'hub' | 'barracks' | 'iron_works' | 'factory' | 'watchtower' | 'bunker';
 
 export const COSTS: Record<UnitType | BuildingType | 'iron_ingot' | 'speed_boost', Partial<Record<ResourceType, number>>> = {
@@ -18,6 +18,7 @@ export const COSTS: Record<UnitType | BuildingType | 'iron_ingot' | 'speed_boost
   knight: { wood: 2, stone: 3, iron: 5 },
   archer: { wood: 5, stone: 5, iron: 5 },
   builder: { wood: 5, stone: 5 },
+  firebird: { wood: 20, stone: 10, iron: 25 },
   // Buildings
   hub: { wood: 0, stone: 0 },
   barracks: { wood: 10, stone: 15 },
@@ -37,6 +38,7 @@ export const PRODUCTION_TIME: Record<string, number> = {
   miner: 3000,
   lumberjack: 3000,
   builder: 5000,
+  firebird: 15000,
 };
 
 export const UNIT_STATS: Record<UnitType, { hp: number, attack: number, speed: number, range: number }> = {
@@ -45,6 +47,7 @@ export const UNIT_STATS: Record<UnitType, { hp: number, attack: number, speed: n
   knight: { hp: 80, attack: 10, speed: 2, range: 15 },
   archer: { hp: 40, attack: 8, speed: 1.8, range: 150 },
   builder: { hp: 30, attack: 2, speed: 1.4, range: 10 },
+  firebird: { hp: 60, attack: 12, speed: 2.5, range: 200 },
 };
 
 export const BUILDING_STATS: Record<BuildingType, { hp: number, size: number }> = {
@@ -77,6 +80,7 @@ export interface Entity {
   buildType?: BuildingType;
   productionQueue?: (UnitType | 'iron_ingot')[];
   productionTimer?: number;
+  burnTicks?: number;
 }
 
 export interface PlayerState {

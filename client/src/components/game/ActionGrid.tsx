@@ -136,6 +136,12 @@ export function ActionGrid({
             cost={COSTS.archer}
             onClick={() => onTrain('archer')} 
           />
+          <ActionButton 
+            icon={ChevronUp} 
+            label="Firebird" 
+            cost={COSTS.firebird}
+            onClick={() => onTrain('firebird')} 
+          />
         </>
       );
     }

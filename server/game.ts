@@ -333,6 +333,10 @@ export class Game {
 
           if (dist <= stats.range + 10) { 
              target.hp -= stats.attack * 0.2; 
+             // Firebird burn effect
+             if (entity.type === 'firebird') {
+               target.burnTicks = 50; // 5 seconds of burn
+             }
           } else {
              this.moveTowards(entity, target.position);
           }
@@ -340,6 +344,12 @@ export class Game {
       } else {
         entity.state = 'idle';
       }
+    }
+
+    // Burn damage
+    if (entity.burnTicks && entity.burnTicks > 0) {
+      entity.hp -= 0.5;
+      entity.burnTicks--;
     }
 
     // Production logic

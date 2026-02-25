@@ -397,6 +397,12 @@ export function CanvasRenderer({
             ctx.moveTo(0, -ENTITY_RADIUS * 1.2);
             ctx.lineTo(ENTITY_RADIUS, ENTITY_RADIUS);
             ctx.lineTo(-ENTITY_RADIUS, ENTITY_RADIUS);
+        } else if (entity.type === 'firebird') {
+            // Firebird - Phoenix shape
+            ctx.moveTo(0, -ENTITY_RADIUS * 1.5);
+            ctx.lineTo(ENTITY_RADIUS, 0);
+            ctx.lineTo(0, ENTITY_RADIUS * 0.8);
+            ctx.lineTo(-ENTITY_RADIUS, 0);
         } else if (entity.type === 'builder') {
             // Builder - Hexagon
             for (let i = 0; i < 6; i++) {
@@ -443,6 +449,12 @@ export function CanvasRenderer({
         ctx.fillStyle = '#ef4444';
         ctx.font = '900 12px Cinzel';
         ctx.fillText('⚔', 25, barY + 4);
+      }
+
+      if (entity.burnTicks && entity.burnTicks > 0) {
+        ctx.fillStyle = '#f97316';
+        ctx.font = '900 12px Cinzel';
+        ctx.fillText('🔥', -35, barY + 4);
       }
 
       ctx.restore();
