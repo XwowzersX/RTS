@@ -236,6 +236,20 @@ export function CanvasRenderer({
 
     // 2. Resources
     gameState.resources.forEach(res => {
+      // FOG OF WAR CHECK: Hide resources in fog
+      if (playerId && gameState.fogOfWar?.[playerId]) {
+        const GRID_SIZE = 100;
+        const CELL_SIZE = MAP_WIDTH / GRID_SIZE;
+        const gx = Math.floor(res.position.x / CELL_SIZE);
+        const gy = Math.floor(res.position.y / CELL_SIZE);
+        const fogIndex = gy * GRID_SIZE + gx;
+        const isVisible = gameState.fogOfWar[playerId][fogIndex];
+        
+        if (!isVisible) {
+          return;
+        }
+      }
+
       ctx.save();
       ctx.translate(res.position.x, res.position.y);
       
@@ -293,6 +307,21 @@ export function CanvasRenderer({
 
     // 3. Entities (Units & Buildings)
     Object.values(gameState.entities).forEach(entity => {
+      // FOG OF WAR CHECK: Hide enemy entities in fog
+      if (playerId && gameState.fogOfWar?.[playerId]) {
+        const GRID_SIZE = 100;
+        const CELL_SIZE = MAP_WIDTH / GRID_SIZE;
+        const gx = Math.floor(entity.position.x / CELL_SIZE);
+        const gy = Math.floor(entity.position.y / CELL_SIZE);
+        const fogIndex = gy * GRID_SIZE + gx;
+        const isVisible = gameState.fogOfWar[playerId][fogIndex];
+        
+        // Hide if enemy and not visible
+        if (entity.playerId !== playerId && !isVisible) {
+          return;
+        }
+      }
+
       // Don't render garrisoned units
       let isGarrisoned = false;
       for (const eId in gameState.entities) {
