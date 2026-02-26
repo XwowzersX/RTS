@@ -69,6 +69,13 @@ export function ActionGrid({
             active={isPlacementActive}
           />
           <ActionButton 
+            icon={BookOpen} 
+            label="Research Hub" 
+            cost={COSTS.research_hub}
+            onClick={() => onBuild('research_hub')} 
+            active={isPlacementActive}
+          />
+          <ActionButton 
             icon={Eye} 
             label="Watchtower" 
             cost={COSTS.watchtower}
@@ -146,9 +153,8 @@ export function ActionGrid({
       );
     }
 
-    // Iron Works produces iron ingots & research
+    // Iron Works produces iron ingots
     if (entityType === 'iron_works') {
-      const player = playerId ? gameState.players[playerId] : null;
       return (
         <>
           <ActionButton 
@@ -157,12 +163,37 @@ export function ActionGrid({
             cost={COSTS.iron_ingot}
             onClick={() => onTrain('iron_ingot')} 
           />
+        </>
+      );
+    }
+
+    // Research Hub handles all upgrades
+    if (entityType === 'research_hub') {
+      const player = playerId ? gameState.players[playerId] : null;
+      return (
+        <>
           {!player?.researched?.includes('speed_boost') && (
             <ActionButton 
               icon={ArrowUp} 
               label="Speed Research" 
-              cost={{ iron: 50, wood: 50 }}
+              cost={COSTS.speed_boost}
               onClick={() => onTrain('speed_boost')} 
+            />
+          )}
+          {!player?.researched?.includes('combat_training') && (
+            <ActionButton 
+              icon={Sword} 
+              label="Combat Training" 
+              cost={COSTS.combat_training}
+              onClick={() => onTrain('combat_training')} 
+            />
+          )}
+          {!player?.researched?.includes('fortified_structures') && (
+            <ActionButton 
+              icon={Shield} 
+              label="Fortified Walls" 
+              cost={COSTS.fortified_structures}
+              onClick={() => onTrain('fortified_structures')} 
             />
           )}
         </>

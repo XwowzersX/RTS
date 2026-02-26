@@ -9,9 +9,9 @@ export const TICK_RATE = 10; // Updates per second
 
 export type ResourceType = 'wood' | 'stone' | 'iron';
 export type UnitType = 'lumberjack' | 'miner' | 'knight' | 'archer' | 'builder' | 'firebird';
-export type BuildingType = 'hub' | 'barracks' | 'iron_works' | 'factory' | 'watchtower' | 'bunker';
+export type BuildingType = 'hub' | 'barracks' | 'iron_works' | 'factory' | 'watchtower' | 'bunker' | 'research_hub';
 
-export const COSTS: Record<UnitType | BuildingType | 'iron_ingot' | 'speed_boost', Partial<Record<ResourceType, number>>> = {
+export const COSTS: Record<UnitType | BuildingType | 'iron_ingot' | 'speed_boost' | 'combat_training' | 'fortified_structures', Partial<Record<ResourceType, number>>> = {
   // Units
   lumberjack: { wood: 3, stone: 5 },
   miner: { wood: 5, stone: 2 },
@@ -26,9 +26,12 @@ export const COSTS: Record<UnitType | BuildingType | 'iron_ingot' | 'speed_boost
   factory: { wood: 10, stone: 10 },
   watchtower: { wood: 20, stone: 20, iron: 10 },
   bunker: { wood: 30, stone: 30, iron: 10 },
+  research_hub: { wood: 10, stone: 10, iron: 1 },
   // Production
   iron_ingot: { stone: 5 },
   speed_boost: { wood: 50, iron: 50 },
+  combat_training: { wood: 40, iron: 60 },
+  fortified_structures: { stone: 80, iron: 40 },
 };
 
 export const PRODUCTION_TIME: Record<string, number> = {
@@ -39,6 +42,9 @@ export const PRODUCTION_TIME: Record<string, number> = {
   lumberjack: 3000,
   builder: 5000,
   firebird: 15000,
+  speed_boost: 15000,
+  combat_training: 20000,
+  fortified_structures: 20000,
 };
 
 export const UNIT_STATS: Record<UnitType, { hp: number, attack: number, speed: number, range: number }> = {
@@ -57,6 +63,7 @@ export const BUILDING_STATS: Record<BuildingType, { hp: number, size: number }> 
   factory: { hp: 300, size: 50 },
   watchtower: { hp: 400, size: 40 },
   bunker: { hp: 600, size: 50 },
+  research_hub: { hp: 400, size: 50 },
 };
 
 // --- Game State Types (Not persisted in DB, but shared) ---

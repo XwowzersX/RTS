@@ -329,7 +329,7 @@ export function CanvasRenderer({
       ctx.shadowBlur = 10;
       ctx.shadowColor = 'rgba(0,0,0,0.5)';
       
-      if (['hub', 'barracks', 'iron_works', 'factory', 'watchtower', 'bunker'].includes(entity.type)) {
+      if (['hub', 'barracks', 'iron_works', 'factory', 'watchtower', 'bunker', 'research_hub'].includes(entity.type)) {
         const size = BUILDING_STATS[entity.type as BuildingType].size;
         
         // Drop Shadow

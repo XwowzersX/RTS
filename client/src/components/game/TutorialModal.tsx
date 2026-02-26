@@ -77,6 +77,20 @@ export function TutorialModal() {
 
             <section className="space-y-3">
               <h3 className="text-xl font-bold flex items-center gap-2 border-b border-white/10 pb-2">
+                <BookOpen className="w-5 h-5 text-purple-500" /> Research
+              </h3>
+              <p className="text-sm text-gray-300">
+                Construct a <span className="font-bold text-purple-400">Research Hub</span> to unlock powerful global upgrades:
+              </p>
+              <ul className="list-disc list-inside text-sm text-gray-400 space-y-1">
+                <li><span className="text-white font-bold">Speed Research:</span> Increases unit movement speed by 20%.</li>
+                <li><span className="text-white font-bold">Combat Training:</span> Increases Knight and Archer damage by 20%.</li>
+                <li><span className="text-white font-bold">Fortified Walls:</span> Increases defensive structure range by 20%.</li>
+              </ul>
+            </section>
+
+            <section className="space-y-3">
+              <h3 className="text-xl font-bold flex items-center gap-2 border-b border-white/10 pb-2">
                 <Hammer className="w-5 h-5 text-blue-500" /> Construction
               </h3>
               <p className="text-sm text-gray-300">

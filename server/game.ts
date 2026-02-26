@@ -158,7 +158,13 @@ export class Game {
       // Watchtower/Bunker Automatic Attack
       if ((entity.type === 'watchtower' || entity.type === 'bunker') && entity.hp > 0) {
         let nearestEnemy: any = null;
-        let minDist = entity.type === 'watchtower' ? 300 : 200; // Range
+        let range = entity.type === 'watchtower' ? 300 : 200; // Range
+        
+        // Apply Fortified Structures bonus to defensive buildings range
+        const player = this.state.players[entity.playerId];
+        if (player?.researched?.includes('fortified_structures')) range *= 1.2;
+        
+        let minDist = range;
         
         // Bunker damage depends on garrison
         const garrisonCount = (entity as any).garrisonedIds?.length || 0;
@@ -303,6 +309,12 @@ export class Game {
         if (stats) {
           const dist = this.distance(entity.position, target.position);
           
+          let attackDamage = stats.attack * 0.2;
+          const player = this.state.players[entity.playerId];
+          if (player?.researched?.includes('combat_training') && (entity.type === 'knight' || entity.type === 'archer')) {
+            attackDamage *= 1.2;
+          }
+          
           // Bunker Garrison Check
           const bunkerId = (entity as any).bunkerId;
           if (bunkerId) {
@@ -332,7 +344,7 @@ export class Game {
           if (isGarrisoned) return; // Garrisoned units don't move/attack normally
 
           if (dist <= stats.range + 10) { 
-             target.hp -= stats.attack * 0.2; 
+             target.hp -= attackDamage; 
              // Firebird burn effect
              if (entity.type === 'firebird') {
                target.burnTicks = 50; // 5 seconds of burn
