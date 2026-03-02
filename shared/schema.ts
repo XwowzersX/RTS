@@ -135,6 +135,11 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  wins: integer("wins").default(0),
+  losses: integer("losses").default(0),
+  kills: integer("kills").default(0),
+  resources_gathered: integer("resources_gathered").default(0),
+  play_time: integer("play_time").default(0), // in seconds
 });
 
 export const insertUserSchema = createInsertSchema(users).extend({

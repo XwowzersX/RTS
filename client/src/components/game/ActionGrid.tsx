@@ -1,5 +1,6 @@
 import { BuildingType, UnitType, COSTS, type Entity } from "@shared/schema";
 import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
 import { 
   Sword, Shield, Pickaxe, User, 
   Home, Factory, Hammer, Gavel, ArrowUp,
@@ -262,21 +263,22 @@ function ActionButton({
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Button
-          variant={active ? "default" : "secondary"}
+        <motion.button
+          whileHover={{ scale: 1.05, translateY: -2 }}
+          whileTap={{ scale: 0.95 }}
           className={`
-            h-16 flex flex-col gap-1 p-1 relative overflow-hidden group transition-all duration-200
-            ${active ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : 'hover:bg-accent/10'}
-            border border-white/5
+            h-16 w-full flex flex-col items-center justify-center gap-1 p-1 relative overflow-hidden group transition-all duration-200
+            ${active ? 'ring-2 ring-primary ring-offset-2 ring-offset-background bg-primary text-black' : 'secondary text-secondary-foreground hover:bg-accent/10'}
+            border border-white/5 rounded-md
           `}
           onClick={onClick}
         >
           <Icon className="w-6 h-6 mb-1 group-hover:scale-110 transition-transform" />
-          <span className="text-[10px] font-bold uppercase tracking-tighter truncate w-full">{label}</span>
+          <span className="text-[10px] font-bold uppercase tracking-tighter truncate w-full text-center">{label}</span>
           
           {/* Subtle gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
-        </Button>
+        </motion.button>
       </TooltipTrigger>
       <TooltipContent side="top" className="bg-black/90 border-white/10 text-white p-3">
         <div className="font-bold mb-1 font-serif text-amber-500">{label}</div>
