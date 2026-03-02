@@ -1,19 +1,21 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "@shared/routes";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Swords, Users, BookOpen } from "lucide-react";
+import { Swords, Users, BookOpen, User as UserIcon, LogOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { TutorialModal } from "@/components/game/TutorialModal";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function Lobby() {
   const [gameIdInput, setGameIdInput] = useState("");
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { user, logoutMutation } = useAuth();
 
   const createGameMutation = useMutation({
     mutationFn: async () => {
@@ -40,6 +42,33 @@ export default function Lobby() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      {/* Auth UI */}
+      <div className="absolute top-4 right-4 z-20 flex items-center gap-4">
+        {user ? (
+          <div className="flex items-center gap-3 bg-black/40 backdrop-blur border border-white/10 px-4 py-2 rounded-full shadow-lg">
+            <div className="flex items-center gap-2">
+              <UserIcon className="w-4 h-4 text-primary" />
+              <span className="text-sm font-bold font-rajdhani text-white uppercase tracking-wider">{user.username}</span>
+            </div>
+            <div className="w-px h-4 bg-white/10" />
+            <button 
+              onClick={() => logoutMutation.mutate()}
+              disabled={logoutMutation.isPending}
+              className="text-white/40 hover:text-red-500 transition-colors"
+              title="Logout"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <Link href="/auth">
+            <Button variant="outline" className="rounded-full bg-black/40 backdrop-blur border-white/10 gap-2 font-rajdhani uppercase tracking-widest hover:bg-primary hover:text-black hover:border-primary transition-all duration-300">
+              <UserIcon className="w-4 h-4" />
+              Commander Login
+            </Button>
+          </Link>
+        )}
+      </div>
       {/* Background Decor */}
       <div className="absolute inset-0 bg-gradient-to-br from-gray-900 to-black z-0" />
       <div className="absolute inset-0 bg-[url('https://pixabay.com/get/g9294804f15fa0cf910b5921cb72a2dbcf682118db6fb4d68faaa180b66f1acf461aa04322ba3a43c0cdde0efecd5bb58eb73d7dceb41baef55206638261c62df_1280.jpg')] opacity-10 bg-cover bg-center z-0" />

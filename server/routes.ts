@@ -5,11 +5,13 @@ import { storage } from "./storage";
 import { Game } from "./game";
 import { api, ws } from "@shared/routes";
 import { z } from "zod";
+import { setupAuth } from "./auth";
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  setupAuth(app, storage);
   
   // Create Game
   app.post(api.game.create.path, (req, res) => {
@@ -25,9 +27,12 @@ export async function registerRoutes(
       console.log(`Join failed: Game ${gameId} not found`);
       return res.status(404).json({ message: "Game not found" });
     }
-    const playerId = game.addPlayer("Player");
+    
+    // Use authenticated username if available, otherwise "Guest"
+    const playerName = req.isAuthenticated() ? (req.user as any).username : "Guest";
+    const playerId = game.addPlayer(playerName);
     const player = game.state.players[playerId];
-    console.log(`Player ${playerId} (${player.color}) joined game ${gameId}`);
+    console.log(`Player ${playerName} (${playerId}, ${player.color}) joined game ${gameId}`);
     
     res.json({ playerId, color: player.color });
   });
