@@ -20,7 +20,6 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { toast } = useToast();
   const {
     data: user,
     error,
@@ -34,6 +33,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return res.json();
     },
   });
+
+  const { toast } = useToast();
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: InsertUser) => {

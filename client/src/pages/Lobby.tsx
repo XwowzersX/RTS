@@ -210,7 +210,7 @@ export default function Lobby() {
         </div>
       </div>
 
-      <style jsx global>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         .fly-in-effect {
           animation: fly-in 0.6s forwards cubic-bezier(0.7, 0, 0.3, 1);
           pointer-events: none;
@@ -225,7 +225,7 @@ export default function Lobby() {
             0 5px 0 #333,
             0 10px 0 #222;
         }
-      `}</style>
+      `}} />
     </div>
   );
 }
