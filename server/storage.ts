@@ -7,6 +7,7 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUserStats(id: number, stats: Partial<Omit<User, "id" | "username" | "password">>): Promise<User>;
   
   // Game Storage
   createGame(): Game;
@@ -32,6 +33,16 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const [user] = await db.insert(users).values(insertUser).returning();
+    return user;
+  }
+
+  async updateUserStats(id: number, stats: Partial<Omit<User, "id" | "username" | "password">>): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set(stats)
+      .where(eq(users.id, id))
+      .returning();
+    if (!user) throw new Error("User not found");
     return user;
   }
 
