@@ -473,6 +473,15 @@ export function CanvasRenderer({
       ctx.fillStyle = hpPct > 0.5 ? '#22c55e' : hpPct > 0.2 ? '#f59e0b' : '#ef4444';
       ctx.fillRect(-20, barY, 40 * hpPct, 4);
 
+      // Render Bunker Garrison Count
+      if (entity.type === 'bunker') {
+        const count = (entity as any).garrisonedIds?.length || 0;
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 10px Rajdhani';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${count}/4`, 0, 5);
+      }
+
       // Status Indicator for combat
       if (entity.state === 'attacking') {
         ctx.fillStyle = '#ef4444';

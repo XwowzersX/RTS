@@ -25,7 +25,7 @@ export const COSTS: Record<UnitType | BuildingType | 'iron_ingot' | 'speed_boost
   iron_works: { wood: 15, stone: 10 },
   factory: { wood: 10, stone: 10 },
   watchtower: { wood: 20, stone: 20, iron: 10 },
-  bunker: { wood: 30, stone: 30, iron: 10 },
+  bunker: { wood: 40, stone: 40, iron: 20 },
   research_hub: { wood: 10, stone: 10, iron: 1 },
   // Production
   iron_ingot: { stone: 5 },

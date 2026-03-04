@@ -1,5 +1,6 @@
 import { PRODUCTION_TIME, UNIT_STATS, BUILDING_STATS, COSTS, MAP_WIDTH, MAP_HEIGHT, type GameState, type PlayerState, type Entity, type Position, type UnitType, type BuildingType, type ResourceType } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { storage } from "./storage";
 
 export class Game {
   id: string;
@@ -132,8 +133,21 @@ export class Game {
     for (const entityId in this.state.entities) {
       const entity = this.state.entities[entityId];
       if (entity.hp <= 0) {
+        // Record Kill for the attacker if possible
+        if (entity.targetId) {
+           const killer = this.state.entities[entity.targetId];
+           if (killer && killer.playerId !== entity.playerId) {
+              this.incrementStat(killer.playerId, 'kills', 1);
+           }
+        }
+
         if (entity.type === 'hub') {
           this.state.winner = Object.keys(this.state.players).find(id => id !== entity.playerId);
+          if (this.state.winner) {
+            this.incrementStat(this.state.winner, 'wins', 1);
+            const loser = Object.keys(this.state.players).find(id => id !== this.state.winner);
+            if (loser) this.incrementStat(loser, 'losses', 1);
+          }
           this.stop();
         }
         
@@ -224,6 +238,15 @@ export class Game {
     }
   }
 
+  private incrementStat(playerId: string, field: string, amount: number) {
+    const player = this.state.players[playerId];
+    if (player && (player as any).userId) {
+       // Get current user stats first to increment, or use a db.update with increment logic
+       // For simplicity in MemStorage, we'll just send the increment
+       storage.updateUserStats((player as any).userId, { [field]: amount });
+    }
+  }
+
   private handleEntityBehavior(entity: Entity) {
     if (entity.state === 'building' && entity.targetPosition) {
         const dist = this.distance(entity.position, entity.targetPosition);
@@ -294,6 +317,7 @@ export class Game {
         if (dist < 50) {
           const type = entity.type === 'lumberjack' ? 'wood' : 'stone';
           this.state.players[entity.playerId].resources[type] += 1;
+          this.incrementStat(entity.playerId, 'resources_gathered', 1);
           entity.state = 'gathering'; 
         } else {
           this.moveTowards(entity, hub.position);
@@ -389,6 +413,18 @@ export class Game {
                 if (!player.researched.includes('speed_boost')) {
                   player.researched.push('speed_boost');
                 }
+            } else if ((item as string) === 'combat_training') {
+                const player = this.state.players[entity.playerId];
+                if (!player.researched) player.researched = [];
+                if (!player.researched.includes('combat_training')) {
+                  player.researched.push('combat_training');
+                }
+            } else if ((item as string) === 'fortified_structures') {
+                const player = this.state.players[entity.playerId];
+                if (!player.researched) player.researched = [];
+                if (!player.researched.includes('fortified_structures')) {
+                  player.researched.push('fortified_structures');
+                }
             } else if (item) {
                 // Train unit
                 const id = randomUUID();
@@ -411,10 +447,6 @@ export class Game {
 
     // General Moving (Action Move)
     if (entity.state === 'moving' && entity.targetId === undefined) { 
-        // We need a separate field for 'destination' or re-use targetId logic?
-        // Ideally entity has 'destination'. I'll add destination to Entity in schema or just assume state handled elsewhere?
-        // For MVP, I'll hack it: Action Move sets state to 'moving' and we need a destination field. 
-        // I'll add `destination?: Position` to the Entity type in memory (casting)
         const dest = (entity as any).destination;
         if (dest) {
              const dist = this.distance(entity.position, dest);
@@ -429,11 +461,13 @@ export class Game {
   }
 
   private moveTowards(entity: Entity, target: Position) {
-    let speedMult = 1;
     const player = this.state.players[entity.playerId];
-    if (player?.researched?.includes('speed_boost')) speedMult = 1.2;
+    const speedMult = (player?.researched?.includes('speed_boost')) ? 1.2 : 1;
     
-    const speed = (UNIT_STATS[entity.type as UnitType]?.speed || 1) * 3 * speedMult;
+    // Hubs move extremely slowly
+    const isHub = entity.type === 'hub';
+    const baseSpeed = isHub ? 0.1 : (UNIT_STATS[entity.type as UnitType]?.speed || 1);
+    const speed = baseSpeed * 3 * speedMult;
     const dx = target.x - entity.position.x;
     const dy = target.y - entity.position.y;
     const dist = Math.sqrt(dx*dx + dy*dy);
@@ -475,10 +509,10 @@ export class Game {
        if (hubsInSelection.length > 0) {
          if (snapSpot) {
            hubsInSelection.forEach((hub: any) => {
-             hub.position = { ...snapSpot };
+             hub.state = 'moving';
+             hub.destination = { ...snapSpot };
            });
          }
-         // Even if no snapSpot, we return to prevent hubs from moving elsewhere
          return;
        }
 
@@ -532,7 +566,8 @@ export class Game {
           // If hub already exists, move it instead of building new
           const existingHub = Object.values(this.state.entities).find(e => e.type === 'hub' && e.playerId === playerId);
           if (existingHub) {
-            existingHub.position = snapSpot;
+            existingHub.state = 'moving';
+            (existingHub as any).destination = snapSpot;
             return;
           }
           
@@ -563,10 +598,12 @@ export class Game {
         let canAfford = true;
         if (cost.wood && player.resources.wood < cost.wood) canAfford = false;
         if (cost.stone && player.resources.stone < cost.stone) canAfford = false;
+        if (cost.iron && player.resources.iron < cost.iron) canAfford = false;
         
         if (canAfford) {
             if (cost.wood) player.resources.wood -= cost.wood;
             if (cost.stone) player.resources.stone -= cost.stone;
+            if (cost.iron) player.resources.iron -= cost.iron;
             
             builder.state = 'building';
             builder.targetPosition = position;
@@ -591,7 +628,10 @@ export class Game {
                return;
              }
 
-             const cost = unitType === 'speed_boost' ? { iron: 50, wood: 50 } : COSTS[unitType as keyof typeof COSTS];
+             const cost = unitType === 'speed_boost' ? { iron: 50, wood: 50 } : 
+                          unitType === 'combat_training' ? { wood: 40, iron: 60 } :
+                          unitType === 'fortified_structures' ? { stone: 80, iron: 40 } :
+                          COSTS[unitType as keyof typeof COSTS];
              const player = this.state.players[playerId];
              
              let canAfford = true;

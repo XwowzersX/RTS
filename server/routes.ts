@@ -29,9 +29,13 @@ export async function registerRoutes(
     }
     
     // Use authenticated username if available, otherwise "Guest"
-    const playerName = req.isAuthenticated() ? (req.user as any).username : "Guest";
+    const user = req.isAuthenticated() ? (req.user as any) : null;
+    const playerName = user ? user.username : "Guest";
     const playerId = game.addPlayer(playerName);
     const player = game.state.players[playerId];
+    if (user) {
+      (player as any).userId = user.id;
+    }
     console.log(`Player ${playerName} (${playerId}, ${player.color}) joined game ${gameId}`);
     
     res.json({ playerId, color: player.color });

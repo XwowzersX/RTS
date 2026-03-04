@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { 
   Sword, Shield, Pickaxe, User, 
   Home, Factory, Hammer, Gavel, ArrowUp,
-  MousePointer2, Box, ChevronUp, Eye
+  MousePointer2, Box, ChevronUp, Eye, BookOpen
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -173,30 +173,24 @@ export function ActionGrid({
       const player = playerId ? gameState.players[playerId] : null;
       return (
         <>
-          {!player?.researched?.includes('speed_boost') && (
-            <ActionButton 
-              icon={ArrowUp} 
-              label="Speed Research" 
-              cost={COSTS.speed_boost}
-              onClick={() => onTrain('speed_boost')} 
-            />
-          )}
-          {!player?.researched?.includes('combat_training') && (
-            <ActionButton 
-              icon={Sword} 
-              label="Combat Training" 
-              cost={COSTS.combat_training}
-              onClick={() => onTrain('combat_training')} 
-            />
-          )}
-          {!player?.researched?.includes('fortified_structures') && (
-            <ActionButton 
-              icon={Shield} 
-              label="Fortified Walls" 
-              cost={COSTS.fortified_structures}
-              onClick={() => onTrain('fortified_structures')} 
-            />
-          )}
+          <ActionButton 
+            icon={ArrowUp} 
+            label="Speed Research" 
+            cost={{ wood: 50, iron: 50 }}
+            onClick={() => onTrain('speed_boost')} 
+          />
+          <ActionButton 
+            icon={Sword} 
+            label="Combat Training" 
+            cost={{ wood: 40, iron: 60 }}
+            onClick={() => onTrain('combat_training')} 
+          />
+          <ActionButton 
+            icon={Shield} 
+            label="Fortified Walls" 
+            cost={{ stone: 80, iron: 40 }}
+            onClick={() => onTrain('fortified_structures')} 
+          />
         </>
       );
     }

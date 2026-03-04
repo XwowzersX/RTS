@@ -36,13 +36,22 @@ export class MemStorage implements IStorage {
     return user;
   }
 
-  async updateUserStats(id: number, stats: Partial<Omit<User, "id" | "username" | "password">>): Promise<User> {
+  async updateUserStats(id: number, stats: any): Promise<User> {
+    const [currentUser] = await db.select().from(users).where(eq(users.id, id));
+    if (!currentUser) throw new Error("User not found");
+
+    const updatedStats: any = {};
+    for (const key in stats) {
+      if (key in currentUser) {
+        updatedStats[key] = (currentUser as any)[key] + stats[key];
+      }
+    }
+
     const [user] = await db
       .update(users)
-      .set(stats)
+      .set(updatedStats)
       .where(eq(users.id, id))
       .returning();
-    if (!user) throw new Error("User not found");
     return user;
   }
 
