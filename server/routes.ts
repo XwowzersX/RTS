@@ -28,9 +28,15 @@ export async function registerRoutes(
       return res.status(404).json({ message: "Game not found" });
     }
     
-    // Use authenticated username if available, otherwise "Guest"
     const user = req.isAuthenticated() ? (req.user as any) : null;
     const playerName = user ? user.username : "Guest";
+    
+    // Check if game exists, if not create a "Solo" game for AI
+    let game = storage.getGame(gameId);
+    if (!game) {
+      game = storage.createGameWithId(gameId);
+    }
+    
     const playerId = game.addPlayer(playerName);
     const player = game.state.players[playerId];
     if (user) {
