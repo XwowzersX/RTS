@@ -361,53 +361,91 @@ export function CanvasRenderer({
       if (['hub', 'barracks', 'iron_works', 'factory', 'watchtower', 'bunker', 'research_hub'].includes(entity.type)) {
         const size = BUILDING_STATS[entity.type as BuildingType].size;
         
-        // Drop Shadow
-        ctx.shadowColor = 'rgba(0,0,0,0.5)';
-        ctx.shadowBlur = 15;
-        ctx.shadowOffsetY = 5;
+        // Complex Building Shadow
+        ctx.shadowColor = 'rgba(0,0,0,0.6)';
+        ctx.shadowBlur = 20;
+        ctx.shadowOffsetY = 8;
 
-        // Base structure
-        ctx.fillStyle = '#1e293b'; // Deep slate base
+        // 1. Base Plate (Industrial feel)
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(-size/2 - 2, -size/2 - 2, size + 4, size + 4);
+        
+        // 2. Main Structure with Gradient
+        const gradient = ctx.createLinearGradient(-size/2, -size/2, size/2, size/2);
+        gradient.addColorStop(0, '#1e293b');
+        gradient.addColorStop(1, '#334155');
+        ctx.fillStyle = gradient;
         ctx.fillRect(-size/2, -size/2, size, size);
         
-        // Roof/Feature color
+        // 3. Roof Structures (Vary by type)
         ctx.shadowBlur = 0;
         ctx.shadowOffsetY = 0;
         ctx.fillStyle = color;
-        ctx.beginPath();
-        ctx.moveTo(-size/2, -size/2);
-        ctx.lineTo(0, -size/1.2); // Sharper roof
-        ctx.lineTo(size/2, -size/2);
-        ctx.closePath();
-        ctx.fill();
-
-        // Architectural details
-        ctx.fillStyle = '#fde047'; // Glowing windows
-        ctx.globalAlpha = 0.8;
-        ctx.fillRect(-size/3, size/6, size/10, size/10);
-        ctx.fillRect(size/6, size/6, size/10, size/10);
-        ctx.globalAlpha = 1.0;
-
-        // Bunker garrison indicators
-        if (entity.type === 'bunker') {
-          const count = (entity as any).garrisonedIds?.length || 0;
-          ctx.fillStyle = '#ef4444';
-          for (let i = 0; i < count; i++) {
-            ctx.beginPath();
-            ctx.arc(-size/2 + 10 + i * 8, -size/2 + 10, 3, 0, Math.PI * 2);
-            ctx.fill();
-          }
-        }
         
-        // Emblems/Trim
-        ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-        ctx.strokeRect(-size/2 + 2, -size/2 + 2, size - 4, size - 4);
+        if (entity.type === 'hub') {
+          // Command Center: Octagonal roof with antenna
+          ctx.beginPath();
+          for(let i=0; i<8; i++) {
+            const angle = (i * Math.PI) / 4;
+            ctx.lineTo(Math.cos(angle) * (size/2), Math.sin(angle) * (size/2));
+          }
+          ctx.closePath();
+          ctx.fill();
+          
+          // Antenna
+          ctx.strokeStyle = '#fff';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(0, -size);
+          ctx.stroke();
+          ctx.fillStyle = '#ef4444';
+          ctx.beginPath();
+          ctx.arc(0, -size, 3, 0, Math.PI*2);
+          ctx.fill();
+        } else if (entity.type === 'barracks') {
+          // Military: Sloped roofs with vents
+          ctx.fillRect(-size/2, -size/4, size, size/2);
+          ctx.fillStyle = '#000';
+          ctx.fillRect(-size/3, -size/3, size/6, size/10);
+          ctx.fillRect(size/6, -size/3, size/6, size/10);
+        } else if (entity.type === 'research_hub') {
+          // Tech: Domed roof with glowing ring
+          ctx.beginPath();
+          ctx.arc(0, 0, size/2.2, 0, Math.PI*2);
+          ctx.fill();
+          ctx.strokeStyle = '#60a5fa';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(0, 0, size/3, 0, Math.PI*2);
+          ctx.stroke();
+        } else {
+          // Default: Sharp roof
+          ctx.beginPath();
+          ctx.moveTo(-size/2, -size/2);
+          ctx.lineTo(0, -size/1.1);
+          ctx.lineTo(size/2, -size/2);
+          ctx.closePath();
+          ctx.fill();
+        }
 
-        // Label
-        ctx.fillStyle = '#e2e8f0';
-        ctx.font = '700 11px Rajdhani';
+        // 4. Glowing Windows & Details
+        const time = Date.now() / 1000;
+        const pulse = (Math.sin(time * 2) + 1) / 2;
+        ctx.fillStyle = `rgba(253, 224, 71, ${0.5 + pulse * 0.5})`;
+        ctx.fillRect(-size/3, size/6, size/8, size/8);
+        ctx.fillRect(size/6, size/6, size/8, size/8);
+
+        // 5. Metal Trim
+        ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-size/2, -size/2, size, size);
+        
+        // 6. Label with style
+        ctx.fillStyle = '#cbd5e1';
+        ctx.font = 'bold 12px Rajdhani';
         ctx.textAlign = 'center';
-        ctx.fillText(entity.type.replace('_', ' ').toUpperCase(), 0, size/2 + 20);
+        ctx.fillText(entity.type.replace('_', ' ').toUpperCase(), 0, size/2 + 25);
       } else {
         // Unit Styling - Dynamic Shapes
         ctx.shadowBlur = 8;
