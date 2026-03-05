@@ -19,33 +19,27 @@ export async function registerRoutes(
     res.json({ gameId: game.id });
   });
 
-  // Join Game
-  app.post(api.game.join.path, (req, res) => {
-    const { gameId } = req.body;
-    const game = storage.getGame(gameId);
-    if (!game) {
-      console.log(`Join failed: Game ${gameId} not found`);
-      return res.status(404).json({ message: "Game not found" });
-    }
-    
-    const user = req.isAuthenticated() ? (req.user as any) : null;
-    const playerName = user ? user.username : "Guest";
-    
-    // Check if game exists, if not create a "Solo" game for AI
-    let game = storage.getGame(gameId);
-    if (!game) {
-      game = storage.createGameWithId(gameId);
-    }
-    
-    const playerId = game.addPlayer(playerName);
-    const player = game.state.players[playerId];
-    if (user) {
-      (player as any).userId = user.id;
-    }
-    console.log(`Player ${playerName} (${playerId}, ${player.color}) joined game ${gameId}`);
-    
-    res.json({ playerId, color: player.color });
-  });
+    // Join Game
+    app.post(api.game.join.path, (req, res) => {
+      const { gameId } = req.body;
+      const user = req.isAuthenticated() ? (req.user as any) : null;
+      const playerName = user ? user.username : "Guest";
+      
+      // Check if game exists, if not create a "Solo" game for AI
+      let game = storage.getGame(gameId);
+      if (!game) {
+        game = storage.createGameWithId(gameId);
+      }
+      
+      const playerId = game.addPlayer(playerName);
+      const player = game.state.players[playerId];
+      if (user) {
+        (player as any).userId = user.id;
+      }
+      console.log(`Player ${playerName} (${playerId}, ${player.color}) joined game ${gameId}`);
+      
+      res.json({ playerId, color: player.color });
+    });
 
   // WebSocket
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });

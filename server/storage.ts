@@ -55,13 +55,17 @@ export class MemStorage implements IStorage {
     return user;
   }
 
-  createGame(): Game {
-    const id = Math.random().toString(36).substring(7);
+  createGameWithId(id: string): Game {
     const game = new Game(id, (state) => {
       // Broadcast hook - handled in routes
     });
     this.games.set(id, game);
     return game;
+  }
+
+  createGame(): Game {
+    const id = Math.random().toString(36).substring(7);
+    return this.createGameWithId(id);
   }
 
   getGame(id: string): Game | undefined {
