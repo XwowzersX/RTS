@@ -228,16 +228,21 @@ export class Game {
 
     // AI Economy: Workers should gather
     const workers = aiEntities.filter(e => e.type === 'lumberjack' || e.type === 'miner');
-    workers.forEach(w => {
+    
+    // Split workers between wood and stone
+    workers.forEach((w, idx) => {
       if (w.state === 'idle') {
-        // Find nearest resource to current position
+        const targetType = idx % 2 === 0 ? 'tree' : 'rock';
         let nearestRes = null;
         let minDist = Infinity;
+        
         this.state.resources.forEach(res => {
-          const d = this.distance(w.position, res.position);
-          if (d < minDist) {
-            minDist = d;
-            nearestRes = res;
+          if (res.type === targetType) {
+            const d = this.distance(w.position, res.position);
+            if (d < minDist) {
+              minDist = d;
+              nearestRes = res;
+            }
           }
         });
 
@@ -252,8 +257,9 @@ export class Game {
 
     // AI Production: Keep producing workers if population low
     const hub = aiEntities.find(e => e.type === 'hub');
-    if (hub && workers.length < 10 && aiPlayer.resources.wood > 10 && aiPlayer.resources.stone > 10) {
-      if (!hub.productionQueue || hub.productionQueue.length === 0) {
+    const workerLimit = 16; // Increased from 12
+    if (hub && workers.length < workerLimit && aiPlayer.resources.wood >= 5 && aiPlayer.resources.stone >= 5) {
+      if (!hub.productionQueue || hub.productionQueue.length < 3) {
         this.handleAction(aiId, {
           type: 'action_train',
           payload: { buildingId: hub.id, unitType: 'lumberjack' }
@@ -264,8 +270,11 @@ export class Game {
     // AI Military: Produce units if resources available
     const barracks = aiEntities.find(e => e.type === 'barracks');
     if (barracks && aiPlayer.resources.wood >= 5 && aiPlayer.resources.stone >= 5 && aiPlayer.resources.iron >= 5) {
-      if (!barracks.productionQueue || barracks.productionQueue.length === 0) {
-        const unitToTrain = aiPlayer.resources.iron >= 25 ? 'firebird' : (Math.random() > 0.5 ? 'knight' : 'archer');
+      if (!barracks.productionQueue || barracks.productionQueue.length < 2) {
+        // More balanced unit composition
+        const rand = Math.random();
+        const unitToTrain = aiPlayer.resources.iron >= 25 && rand > 0.7 ? 'firebird' : 
+                          (rand > 0.35 ? 'knight' : 'archer');
         this.handleAction(aiId, {
           type: 'action_train',
           payload: { buildingId: barracks.id, unitType: unitToTrain }
@@ -323,17 +332,25 @@ export class Game {
       }
     }
 
-    // AI Attack: If army size > 5, attack opponent hub
+    // AI Attack: If army size > threshold, launch attack
     const army = aiEntities.filter(e => e.type === 'knight' || e.type === 'archer' || e.type === 'firebird');
-    if (army.length >= 8) {
+    const attackThreshold = 12;
+    if (army.length >= attackThreshold) {
       const opponentHub = opponentEntities.find(e => e.type === 'hub');
-      const nearestOpponent = opponentEntities.sort((a, b) => {
+      // Prioritize military targets, then buildings, then workers
+      const targets = [...opponentEntities].sort((a, b) => {
+        const isMilitary = (type: string) => ['knight', 'archer', 'firebird', 'watchtower', 'bunker'].includes(type);
+        const aMil = isMilitary(a.type);
+        const bMil = isMilitary(b.type);
+        if (aMil && !bMil) return -1;
+        if (!aMil && bMil) return 1;
+        
         const da = this.distance(hub?.position || {x:0,y:0}, a.position);
         const db = this.distance(hub?.position || {x:0,y:0}, b.position);
-        return da - db;
-      })[0];
+        return (a.hp - b.hp) || (da - db);
+      });
 
-      const target = nearestOpponent || opponentHub;
+      const target = targets[0] || opponentHub;
       
       if (target) {
         const idleArmy = army.filter(u => u.state === 'idle' || u.state === 'moving');
@@ -345,6 +362,21 @@ export class Game {
         }
       }
     }
+
+    // AI Micro: If units are being attacked, focus fire on the attacker
+    army.forEach(unit => {
+      if (unit.hp < unit.maxHp && unit.state !== 'attacking') {
+        const nearbyAttacker = opponentEntities.find(opp => 
+          opp.state === 'attacking' && opp.targetId === unit.id
+        );
+        if (nearbyAttacker) {
+          this.handleAction(aiId, {
+            type: 'action_attack',
+            payload: { entityIds: [unit.id], targetEntityId: nearbyAttacker.id }
+          });
+        }
+      }
+    });
   }
 
   private updateFogOfWar() {
