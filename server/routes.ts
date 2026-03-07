@@ -19,27 +19,27 @@ export async function registerRoutes(
     res.json({ gameId: game.id });
   });
 
-    // Join Game
-    app.post(api.game.join.path, (req, res) => {
-      const { gameId } = req.body;
-      const user = req.isAuthenticated() ? (req.user as any) : null;
-      const playerName = user ? user.username : "Guest";
-      
-      // Check if game exists, if not create a "Solo" game for AI
-      let game = storage.getGame(gameId);
-      if (!game) {
-        game = storage.createGameWithId(gameId);
-      }
-      
-      const playerId = game.addPlayer(playerName);
-      const player = game.state.players[playerId];
-      if (user) {
-        (player as any).userId = user.id;
-      }
-      console.log(`Player ${playerName} (${playerId}, ${player.color}) joined game ${gameId}`);
-      
-      res.json({ playerId, color: player.color });
-    });
+  // Join Game
+  app.post(api.game.join.path, (req, res) => {
+    const { gameId } = req.body;
+    const user = req.isAuthenticated() ? (req.user as any) : null;
+    const playerName = user ? user.username : "Guest";
+    
+    // Check if game exists, if not create a "Solo" game for AI
+    let game = storage.getGame(gameId);
+    if (!game) {
+      game = storage.createGameWithId(gameId);
+    }
+    
+    const playerId = game.addPlayer(playerName);
+    const player = game.state.players[playerId];
+    if (user) {
+      (player as any).userId = user.id;
+    }
+    console.log(`Player ${playerName} (${playerId}, ${player.color}) joined game ${gameId}`);
+    
+    res.json({ playerId, color: player.color });
+  });
 
   // WebSocket
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
@@ -59,10 +59,6 @@ export async function registerRoutes(
         console.log('WS Message received:', message.type);
         
         if (message.type === 'join_game') {
-          console.log('Join Game Message Full:', JSON.stringify(message));
-          
-          // The message sent from Game.tsx is sendMessage('join_game', { gameId, playerId })
-          // So message = { type: 'join_game', payload: { gameId, playerId } }
           const gameId = message.payload?.gameId;
           const playerId = message.payload?.playerId;
           
@@ -114,34 +110,13 @@ export async function registerRoutes(
     clearInterval(interval);
   });
 
-  // Global Broadcast Loop (Hack for MVP to avoid complex subscription logic)
+  // Global Broadcast Loop 
   setInterval(() => {
-    wss.clients.forEach((client: any) => {
-       // Ideally we store gameId on the client object
-       // But for now, we just broadcast to everyone if we knew their game.
-       // Let's improve:
-    });
+    // This is handled by Game.onUpdate callbacks now
   }, 100);
   
-  // Hook into Game.onUpdate
-  // We need to register the callback when creating the game, but we need access to WSS.
-  // We can patch the game instances in the storage.
-  
-  const originalCreateGame = storage.createGame.bind(storage);
-  storage.createGame = () => {
-    const id = Math.random().toString(36).substring(7);
-    const game = new Game(id, (state: any) => {
-       // Broadcast to clients in this game
-       const message = JSON.stringify({ type: 'game_update', payload: state });
-       wss.clients.forEach((client: any) => {
-         if (client.readyState === WebSocket.OPEN && client.gameId === id) {
-           client.send(message);
-         }
-       });
-    });
-    (storage as any).games.set(id, game);
-    return game;
-  };
+  // Hook into storage to provide the broadcast callback
+  (storage as any).setWss(wss);
 
   return httpServer;
 }

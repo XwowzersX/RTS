@@ -419,6 +419,60 @@ export function CanvasRenderer({
           ctx.beginPath();
           ctx.arc(0, 0, size/3, 0, Math.PI*2);
           ctx.stroke();
+        } else if (entity.type === 'iron_works') {
+          // Iron Works: Furnace with glowing core
+          ctx.fillRect(-size/2, -size/2, size, size);
+          ctx.fillStyle = '#475569';
+          ctx.beginPath();
+          ctx.arc(0, 0, size/3, 0, Math.PI*2);
+          ctx.fill();
+          // Glowing core
+          ctx.fillStyle = `rgba(239, 68, 68, ${0.5 + pulse * 0.5})`;
+          ctx.beginPath();
+          ctx.arc(0, 0, size/5, 0, Math.PI*2);
+          ctx.fill();
+        } else if (entity.type === 'factory') {
+          // Factory: Multiple smokestacks
+          ctx.fillRect(-size/2, -size/4, size, size/2);
+          ctx.fillStyle = '#334155';
+          for (let i = -1; i <= 1; i++) {
+            ctx.fillRect(i * size/4 - 4, -size/1.5, 8, size/2);
+            // Animated smoke
+            if (entity.state === 'producing') {
+              ctx.fillStyle = `rgba(100, 116, 139, ${0.3 * pulse})`;
+              ctx.beginPath();
+              ctx.arc(i * size/4, -size/1.5 - (time % 2) * 20, 10, 0, Math.PI*2);
+              ctx.fill();
+            }
+          }
+        } else if (entity.type === 'watchtower') {
+          // Watchtower: Tall tower with searchlight
+          ctx.fillRect(-size/4, -size/2, size/2, size);
+          ctx.fillStyle = color;
+          ctx.fillRect(-size/3, -size/1.2, size/1.5, size/4);
+          // Searchlight
+          ctx.save();
+          ctx.rotate(time);
+          ctx.fillStyle = 'rgba(253, 224, 71, 0.2)';
+          ctx.beginPath();
+          ctx.moveTo(0, -size/1.2);
+          ctx.lineTo(size, -size/1.2 - 50);
+          ctx.lineTo(size, -size/1.2 + 50);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        } else if (entity.type === 'bunker') {
+          // Bunker: Low profile, reinforced
+          ctx.beginPath();
+          ctx.moveTo(-size/2, size/2);
+          ctx.lineTo(-size/3, -size/4);
+          ctx.lineTo(size/3, -size/4);
+          ctx.lineTo(size/2, size/2);
+          ctx.closePath();
+          ctx.fill();
+          // Slit
+          ctx.fillStyle = '#000';
+          ctx.fillRect(-size/2.5, -size/8, size/1.25, size/15);
         } else {
           // Default: Sharp roof
           ctx.beginPath();
@@ -430,8 +484,7 @@ export function CanvasRenderer({
         }
 
         // 4. Glowing Windows & Details
-        const time = Date.now() / 1000;
-        const pulse = (Math.sin(time * 2) + 1) / 2;
+        const pulse = (Math.sin(Date.now() / 500) + 1) / 2;
         ctx.fillStyle = `rgba(253, 224, 71, ${0.5 + pulse * 0.5})`;
         ctx.fillRect(-size/3, size/6, size/8, size/8);
         ctx.fillRect(size/6, size/6, size/8, size/8);

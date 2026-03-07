@@ -319,15 +319,22 @@ export class Game {
       }
     }
 
-    // AI Defense: Build Watchtowers near Hub if attacked
+    // AI Defense: Build Watchtowers/Bunkers near Hub if attacked
     const watchtower = aiEntities.find(e => e.type === 'watchtower');
+    const bunker = aiEntities.find(e => e.type === 'bunker');
     const hubPos = hub?.position;
     const beingAttacked = hub && hub.hp < hub.maxHp;
-    if (builder && !watchtower && beingAttacked && aiPlayer.resources.wood >= 20 && aiPlayer.resources.stone >= 20 && aiPlayer.resources.iron >= 10) {
-      if (builder.state === 'idle' && hubPos) {
+    
+    if (builder && beingAttacked && builder.state === 'idle' && hubPos) {
+      if (!watchtower && aiPlayer.resources.wood >= 20 && aiPlayer.resources.stone >= 20 && aiPlayer.resources.iron >= 10) {
         this.handleAction(aiId, {
           type: 'action_build',
           payload: { buildingType: 'watchtower', position: { x: hubPos.x + 100, y: hubPos.y }, builderId: builder.id }
+        });
+      } else if (!bunker && aiPlayer.resources.wood >= 40 && aiPlayer.resources.stone >= 40 && aiPlayer.resources.iron >= 20) {
+        this.handleAction(aiId, {
+          type: 'action_build',
+          payload: { buildingType: 'bunker', position: { x: hubPos.x - 100, y: hubPos.y }, builderId: builder.id }
         });
       }
     }
@@ -461,7 +468,7 @@ export class Game {
            // Gather amount
            resource.amount -= 10;
            if (resource.amount <= 0) {
-             this.state.resources.splice(resourceIdx, 5);
+             this.state.resources.splice(resourceIdx, 1);
            }
            entity.state = 'returning';
         } else {
@@ -794,7 +801,11 @@ export class Game {
                  const unit = this.state.entities[id];
                  if (unit) {
                    unit.state = 'idle';
-                   unit.position = { x: building.position.x + 60, y: building.position.y + 60 };
+                   // Pop unit out slightly away from bunker
+                   unit.position = { 
+                     x: building.position.x + (Math.random() - 0.5) * 40, 
+                     y: building.position.y + 60 
+                   };
                    delete (unit as any).bunkerId;
                  }
                });

@@ -2,23 +2,30 @@ import { users, type User, type InsertUser } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 import { Game } from "./game";
+import { WebSocket } from "ws";
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  updateUserStats(id: number, stats: Partial<Omit<User, "id" | "username" | "password">>): Promise<User>;
+  updateUserStats(id: number, stats: any): Promise<User>;
   
   // Game Storage
   createGame(): Game;
+  createGameWithId(id: string): Game;
   getGame(id: string): Game | undefined;
 }
 
 export class MemStorage implements IStorage {
   private games: Map<string, Game>;
+  private wss: any = null;
 
   constructor() {
     this.games = new Map();
+  }
+
+  setWss(wss: any) {
+    this.wss = wss;
   }
 
   async getUser(id: number): Promise<User | undefined> {
@@ -57,7 +64,14 @@ export class MemStorage implements IStorage {
 
   createGameWithId(id: string): Game {
     const game = new Game(id, (state) => {
-      // Broadcast hook - handled in routes
+      if (this.wss) {
+        const message = JSON.stringify({ type: 'game_update', payload: state });
+        this.wss.clients.forEach((client: any) => {
+          if (client.readyState === WebSocket.OPEN && client.gameId === id) {
+            client.send(message);
+          }
+        });
+      }
     });
     this.games.set(id, game);
     return game;
