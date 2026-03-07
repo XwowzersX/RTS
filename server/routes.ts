@@ -13,9 +13,9 @@ export async function registerRoutes(
 ): Promise<Server> {
   setupAuth(app, storage);
   
-  // Create Game
+  // Create Game (multiplayer)
   app.post(api.game.create.path, (req, res) => {
-    const game = storage.createGame();
+    const game = storage.createGame('multiplayer');
     res.json({ gameId: game.id });
   });
 
@@ -25,10 +25,10 @@ export async function registerRoutes(
     const user = req.isAuthenticated() ? (req.user as any) : null;
     const playerName = user ? user.username : "Guest";
     
-    // Check if game exists, if not create a "Solo" game for AI
+    // Check if game exists, if not create a "Solo" game for AI (quick play)
     let game = storage.getGame(gameId);
     if (!game) {
-      game = storage.createGameWithId(gameId);
+      game = storage.createGameWithId(gameId, 'solo');
     }
     
     const playerId = game.addPlayer(playerName);

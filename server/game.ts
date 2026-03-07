@@ -8,10 +8,12 @@ export class Game {
   private loopInterval: NodeJS.Timeout | null = null;
   private onUpdate: (state: GameState) => void;
   private aiPlayerId: string | null = null;
+  private mode: 'solo' | 'multiplayer';
 
-  constructor(id: string, onUpdate: (state: GameState) => void) {
+  constructor(id: string, onUpdate: (state: GameState) => void, mode: 'solo' | 'multiplayer' = 'multiplayer') {
     this.id = id;
     this.onUpdate = onUpdate;
+    this.mode = mode;
     this.state = {
       id,
       status: 'waiting',
@@ -22,10 +24,6 @@ export class Game {
       fogOfWar: {},
     };
     this.state.resources = this.generateResources();
-    
-    // Auto-add AI if this is a solo/quickplay game
-    // (In a real app, we'd check if the creator wanted AI, 
-    // for this MVP we'll add it if it's the 2nd slot and empty)
   }
 
   private generateResources() {
@@ -111,11 +109,11 @@ export class Game {
       state: 'idle'
     };
 
-    // Auto-start if 2 players
+    // Auto-start if 2 players (multiplayer) or 1 player + AI (solo)
     if (Object.keys(this.state.players).length === 2 && this.state.status === 'waiting') {
       this.start();
-    } else if (Object.keys(this.state.players).length === 1 && this.state.status === 'waiting') {
-      // Add AI as second player
+    } else if (this.mode === 'solo' && Object.keys(this.state.players).length === 1 && this.state.status === 'waiting') {
+      // Add AI as second player for solo mode
       this.aiPlayerId = this.addPlayer("IronMind AI");
       this.start();
     }

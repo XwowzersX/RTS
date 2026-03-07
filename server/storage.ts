@@ -11,8 +11,8 @@ export interface IStorage {
   updateUserStats(id: number, stats: any): Promise<User>;
   
   // Game Storage
-  createGame(): Game;
-  createGameWithId(id: string): Game;
+  createGame(mode?: 'solo' | 'multiplayer'): Game;
+  createGameWithId(id: string, mode?: 'solo' | 'multiplayer'): Game;
   getGame(id: string): Game | undefined;
 }
 
@@ -62,7 +62,7 @@ export class MemStorage implements IStorage {
     return user;
   }
 
-  createGameWithId(id: string): Game {
+  createGameWithId(id: string, mode: 'solo' | 'multiplayer' = 'multiplayer'): Game {
     const game = new Game(id, (state) => {
       if (this.wss) {
         const message = JSON.stringify({ type: 'game_update', payload: state });
@@ -72,14 +72,14 @@ export class MemStorage implements IStorage {
           }
         });
       }
-    });
+    }, mode);
     this.games.set(id, game);
     return game;
   }
 
-  createGame(): Game {
+  createGame(mode: 'solo' | 'multiplayer' = 'multiplayer'): Game {
     const id = Math.random().toString(36).substring(7);
-    return this.createGameWithId(id);
+    return this.createGameWithId(id, mode);
   }
 
   getGame(id: string): Game | undefined {
