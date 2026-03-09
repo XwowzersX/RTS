@@ -62,8 +62,8 @@ export const BUILDING_STATS: Record<BuildingType, { hp: number, size: number }> 
   iron_works: { hp: 300, size: 50 },
   factory: { hp: 300, size: 50 },
   watchtower: { hp: 400, size: 40 },
-  bunker: { hp: 600, size: 50 },
   research_hub: { hp: 400, size: 50 },
+  bunker: { hp: 600, size: 50 },
 };
 
 // --- Game State Types (Not persisted in DB, but shared) ---

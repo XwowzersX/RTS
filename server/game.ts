@@ -485,8 +485,8 @@ export class Game {
         // Garrisoned units skip behavior
         let isGarrisoned = false;
         for (const eId in this.state.entities) {
-          const bunker = this.state.entities[eId];
-          if (bunker.type === 'bunker' && (bunker as any).garrisonedIds?.includes(entity.id)) {
+          const b = this.state.entities[eId];
+          if (b.type === 'bunker' && (b as any).garrisonedIds?.includes(entity.id)) {
             isGarrisoned = true;
             break;
           }
@@ -538,8 +538,8 @@ export class Game {
           // Damage logic (simplified for archers in bunkers)
           let isGarrisoned = false;
           for (const eId in this.state.entities) {
-            const bunker = this.state.entities[eId];
-            if (bunker.type === 'bunker' && (bunker as any).garrisonedIds?.includes(entity.id)) {
+            const b = this.state.entities[eId];
+            if (b.type === 'bunker' && (b as any).garrisonedIds?.includes(entity.id)) {
               isGarrisoned = true;
               break;
             }
@@ -663,7 +663,8 @@ export class Game {
     }
   }
 
-  private distance(p1: Position, p2: Position) {
+  private distance(p1: Position, p2: Position): number {
+    if (!p1 || !p2) return Infinity;
     return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
   }
 

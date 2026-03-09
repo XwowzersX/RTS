@@ -325,8 +325,8 @@ export function CanvasRenderer({
       // Don't render garrisoned units
       let isGarrisoned = false;
       for (const eId in gameState.entities) {
-        const bunker = gameState.entities[eId];
-        if (bunker.type === 'bunker' && (bunker as any).garrisonedIds?.includes(entity.id)) {
+        const b = gameState.entities[eId];
+        if (b.type === 'bunker' && (b as any).garrisonedIds?.includes(entity.id)) {
           isGarrisoned = true;
           break;
         }
