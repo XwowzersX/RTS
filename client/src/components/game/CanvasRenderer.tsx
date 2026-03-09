@@ -360,6 +360,8 @@ export function CanvasRenderer({
       
       if (['hub', 'barracks', 'iron_works', 'factory', 'watchtower', 'bunker', 'research_hub'].includes(entity.type)) {
         const size = BUILDING_STATS[entity.type as BuildingType].size;
+        const time = Date.now() / 1000;
+        const pulse = (Math.sin(time * 2) + 1) / 2;
         
         // Complex Building Shadow
         ctx.shadowColor = 'rgba(0,0,0,0.6)';
@@ -484,7 +486,6 @@ export function CanvasRenderer({
         }
 
         // 4. Glowing Windows & Details
-        const pulse = (Math.sin(Date.now() / 500) + 1) / 2;
         ctx.fillStyle = `rgba(253, 224, 71, ${0.5 + pulse * 0.5})`;
         ctx.fillRect(-size/3, size/6, size/8, size/8);
         ctx.fillRect(size/6, size/6, size/8, size/8);
