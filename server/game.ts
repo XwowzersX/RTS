@@ -339,7 +339,12 @@ export class Game {
 
     // AI Attack: If army size > threshold, launch attack
     const army = aiEntities.filter(e => e.type === 'knight' || e.type === 'archer' || e.type === 'firebird');
-    const attackThreshold = 12;
+    const attackThreshold = 14; // Slightly increased
+    
+    // Group units for coordinated attack
+    const aiHub = aiEntities.find(e => e.type === 'hub');
+    const rallyPoint = aiHub ? { x: aiHub.position.x + (aiPlayer.color === 'blue' ? 300 : -300), y: aiHub.position.y + (aiPlayer.color === 'blue' ? 300 : -300) } : { x: 2000, y: 2000 };
+
     if (army.length >= attackThreshold) {
       const opponentHub = opponentEntities.find(e => e.type === 'hub');
       // Prioritize military targets, then buildings, then workers
@@ -350,35 +355,68 @@ export class Game {
         if (aMil && !bMil) return -1;
         if (!aMil && bMil) return 1;
         
-        const da = this.distance(hub?.position || {x:0,y:0}, a.position);
-        const db = this.distance(hub?.position || {x:0,y:0}, b.position);
+        const da = this.distance(rallyPoint, a.position);
+        const db = this.distance(rallyPoint, b.position);
         return (a.hp - b.hp) || (da - db);
       });
 
       const target = targets[0] || opponentHub;
       
       if (target) {
+        // Coordinated strike: Only attack if units are somewhat grouped
         const idleArmy = army.filter(u => u.state === 'idle' || u.state === 'moving');
         if (idleArmy.length > 0) {
-          this.handleAction(aiId, {
-            type: 'action_attack',
-            payload: { entityIds: idleArmy.map(u => u.id), targetEntityId: target.id }
-          });
+          const readyToAttack = idleArmy.filter(u => this.distance(u.position, rallyPoint) < 500);
+          
+          if (readyToAttack.length > 8) {
+             this.handleAction(aiId, {
+               type: 'action_attack',
+               payload: { entityIds: readyToAttack.map(u => u.id), targetEntityId: target.id }
+             });
+          } else {
+            // Rally before attacking
+            this.handleAction(aiId, {
+              type: 'action_move',
+              payload: { entityIds: idleArmy.map(u => u.id), target: rallyPoint }
+            });
+          }
         }
+      }
+    } else {
+      // Rally small groups
+      const idleArmy = army.filter(u => u.state === 'idle');
+      if (idleArmy.length > 0) {
+        this.handleAction(aiId, {
+          type: 'action_move',
+          payload: { entityIds: idleArmy.map(u => u.id), target: rallyPoint }
+        });
       }
     }
 
-    // AI Micro: If units are being attacked, focus fire on the attacker
+    // AI Micro: Kiting and target focus
     army.forEach(unit => {
-      if (unit.hp < unit.maxHp && unit.state !== 'attacking') {
-        const nearbyAttacker = opponentEntities.find(opp => 
-          opp.state === 'attacking' && opp.targetId === unit.id
-        );
-        if (nearbyAttacker) {
+      const nearbyEnemies = opponentEntities.filter(opp => this.distance(unit.position, opp.position) < 400);
+      
+      if (nearbyEnemies.length > 0) {
+        const closestEnemy = nearbyEnemies.sort((a, b) => this.distance(unit.position, a.position) - this.distance(unit.position, b.position))[0];
+        
+        // Kiting for archers
+        if (unit.type === 'archer' && unit.hp < unit.maxHp * 0.5) {
+          const escapePos = {
+            x: unit.position.x + (unit.position.x - closestEnemy.position.x),
+            y: unit.position.y + (unit.position.y - closestEnemy.position.y)
+          };
           this.handleAction(aiId, {
-            type: 'action_attack',
-            payload: { entityIds: [unit.id], targetEntityId: nearbyAttacker.id }
+            type: 'action_move',
+            payload: { entityIds: [unit.id], target: escapePos }
           });
+        } 
+        // Focus fire for healthy units
+        else if (unit.state !== 'attacking') {
+           this.handleAction(aiId, {
+             type: 'action_attack',
+             payload: { entityIds: [unit.id], targetEntityId: closestEnemy.id }
+           });
         }
       }
     });
