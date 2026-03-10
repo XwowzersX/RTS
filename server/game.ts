@@ -223,24 +223,48 @@ export class Game {
     const opponentId = Object.keys(this.state.players).find(id => id !== aiId);
     if (!opponentId) return;
     const opponentEntities = Object.values(this.state.entities).filter(e => e.playerId === opponentId);
+    const opponentWorkers = opponentEntities.filter(e => e.type === 'lumberjack' || e.type === 'miner');
 
-    // AI Economy: Workers should gather
+    const hub = aiEntities.find(e => e.type === 'hub');
+    const builders = aiEntities.filter(e => e.type === 'builder');
     const workers = aiEntities.filter(e => e.type === 'lumberjack' || e.type === 'miner');
-    
-    // Split workers between wood and stone
+    const barracks = aiEntities.find(e => e.type === 'barracks');
+    const researchHub = aiEntities.find(e => e.type === 'research_hub');
+    const ironWorks = aiEntities.find(e => e.type === 'iron_works');
+    const factory = aiEntities.find(e => e.type === 'factory');
+
+    // === ECONOMY PRIORITY ===
+    // Aggressively produce workers - up to 20
+    if (hub && workers.length < 20 && aiPlayer.resources.wood >= 3 && aiPlayer.resources.stone >= 5) {
+      if (!hub.productionQueue || hub.productionQueue.length < 4) {
+        this.handleAction(aiId, {
+          type: 'action_train',
+          payload: { buildingId: hub.id, unitType: 'lumberjack' }
+        });
+      }
+    }
+
+    // Produce miners too for variety
+    if (hub && workers.length >= 12 && workers.filter(w => w.type === 'miner').length < 4 && aiPlayer.resources.wood >= 5 && aiPlayer.resources.stone >= 2) {
+      if (!hub.productionQueue || hub.productionQueue.length < 3) {
+        this.handleAction(aiId, {
+          type: 'action_train',
+          payload: { buildingId: hub.id, unitType: 'miner' }
+        });
+      }
+    }
+
+    // Gather efficiently
     workers.forEach((w, idx) => {
       if (w.state === 'idle') {
-        const targetType = idx % 2 === 0 ? 'tree' : 'rock';
         let nearestRes = null;
         let minDist = Infinity;
         
         this.state.resources.forEach(res => {
-          if (res.type === targetType) {
-            const d = this.distance(w.position, res.position);
-            if (d < minDist) {
-              minDist = d;
-              nearestRes = res;
-            }
+          const d = this.distance(w.position, res.position);
+          if (d < minDist) {
+            minDist = d;
+            nearestRes = res;
           }
         });
 
@@ -253,26 +277,12 @@ export class Game {
       }
     });
 
-    // AI Production: Keep producing workers if population low
-    const hub = aiEntities.find(e => e.type === 'hub');
-    const workerLimit = 16; // Increased from 12
-    if (hub && workers.length < workerLimit && aiPlayer.resources.wood >= 5 && aiPlayer.resources.stone >= 5) {
-      if (!hub.productionQueue || hub.productionQueue.length < 3) {
-        this.handleAction(aiId, {
-          type: 'action_train',
-          payload: { buildingId: hub.id, unitType: 'lumberjack' }
-        });
-      }
-    }
-
-    // AI Military: Produce units if resources available
-    const barracks = aiEntities.find(e => e.type === 'barracks');
+    // === MILITARY PRODUCTION ===
     if (barracks && aiPlayer.resources.wood >= 5 && aiPlayer.resources.stone >= 5 && aiPlayer.resources.iron >= 5) {
-      if (!barracks.productionQueue || barracks.productionQueue.length < 2) {
-        // More balanced unit composition
+      if (!barracks.productionQueue || barracks.productionQueue.length < 3) {
         const rand = Math.random();
-        const unitToTrain = aiPlayer.resources.iron >= 25 && rand > 0.7 ? 'firebird' : 
-                          (rand > 0.35 ? 'knight' : 'archer');
+        const unitToTrain = aiPlayer.resources.iron >= 30 && rand > 0.5 ? 'firebird' : 
+                          (rand > 0.4 ? 'knight' : 'archer');
         this.handleAction(aiId, {
           type: 'action_train',
           payload: { buildingId: barracks.id, unitType: unitToTrain }
@@ -280,143 +290,182 @@ export class Game {
       }
     }
 
-    // AI Construction: Build barracks if none
-    const builder = aiEntities.find(e => e.type === 'builder');
-    if (builder && !barracks && aiPlayer.resources.wood >= 10 && aiPlayer.resources.stone >= 15) {
-      if (builder.state === 'idle') {
-        const buildPos = { x: builder.position.x + 200, y: builder.position.y + 200 };
+    // === BUILDING PROGRESSION ===
+    const idleBuilder = builders.find(b => b.state === 'idle');
+    
+    // Build Iron Works ASAP for resource generation
+    if (idleBuilder && !ironWorks && aiPlayer.resources.wood >= 15 && aiPlayer.resources.stone >= 10) {
+      const buildPos = { x: idleBuilder.position.x + 150, y: idleBuilder.position.y + 150 };
+      this.handleAction(aiId, {
+        type: 'action_build',
+        payload: { buildingType: 'iron_works', position: buildPos, builderId: idleBuilder.id }
+      });
+    }
+
+    // Build second builder ASAP
+    const builderCount = builders.length;
+    if (hub && builderCount < 2 && aiPlayer.resources.wood >= 5 && aiPlayer.resources.stone >= 5) {
+      if (!hub.productionQueue || hub.productionQueue.length < 2) {
         this.handleAction(aiId, {
-          type: 'action_build',
-          payload: { buildingType: 'barracks', position: buildPos, builderId: builder.id }
+          type: 'action_train',
+          payload: { buildingId: hub.id, unitType: 'builder' }
         });
       }
     }
 
-    // AI Tech: Build Research Hub and get upgrades
-    const researchHub = aiEntities.find(e => e.type === 'research_hub');
-    if (builder && !researchHub && aiPlayer.resources.wood >= 10 && aiPlayer.resources.stone >= 10 && aiPlayer.resources.iron >= 1) {
-      if (builder.state === 'idle') {
-        const buildPos = { x: builder.position.x - 200, y: builder.position.y + 200 };
+    // Build Barracks
+    if (idleBuilder && !barracks && aiPlayer.resources.wood >= 10 && aiPlayer.resources.stone >= 15) {
+      const buildPos = { x: idleBuilder.position.x + 250, y: idleBuilder.position.y };
+      this.handleAction(aiId, {
+        type: 'action_build',
+        payload: { buildingType: 'barracks', position: buildPos, builderId: idleBuilder.id }
+      });
+    }
+
+    // Build Research Hub for upgrades
+    if (idleBuilder && !researchHub && aiPlayer.resources.wood >= 10 && aiPlayer.resources.stone >= 10 && aiPlayer.resources.iron >= 1) {
+      const buildPos = { x: idleBuilder.position.x - 250, y: idleBuilder.position.y };
+      this.handleAction(aiId, {
+        type: 'action_build',
+        payload: { buildingType: 'research_hub', position: buildPos, builderId: idleBuilder.id }
+      });
+    }
+
+    // Build Factory for more iron
+    if (idleBuilder && factory && ironWorks && aiPlayer.resources.wood >= 10 && aiPlayer.resources.stone >= 10) {
+      const buildPos = { x: idleBuilder.position.x, y: idleBuilder.position.y - 250 };
+      this.handleAction(aiId, {
+        type: 'action_build',
+        payload: { buildingType: 'factory', position: buildPos, builderId: idleBuilder.id }
+      });
+    }
+
+    // === TECH UPGRADES ===
+    if (researchHub && !researchHub.productionQueue?.length) {
+      const tech = !aiPlayer.researched.includes('speed_boost') ? 'speed_boost' : 
+                   !aiPlayer.researched.includes('combat_training') && aiPlayer.resources.iron >= 60 ? 'combat_training' :
+                   !aiPlayer.researched.includes('fortified_structures') && aiPlayer.resources.stone >= 80 ? 'fortified_structures' : null;
+      if (tech && aiPlayer.resources.wood >= 40 && aiPlayer.resources.stone >= 40) {
         this.handleAction(aiId, {
-          type: 'action_build',
-          payload: { buildingType: 'research_hub', position: buildPos, builderId: builder.id }
+          type: 'action_train',
+          payload: { buildingId: researchHub.id, unitType: tech as any }
         });
       }
     }
 
-    if (researchHub && aiPlayer.resources.iron >= 50 && aiPlayer.resources.wood >= 50) {
-      if (!researchHub.productionQueue || researchHub.productionQueue.length === 0) {
-        const tech = !aiPlayer.researched.includes('speed_boost') ? 'speed_boost' : 
-                     (!aiPlayer.researched.includes('combat_training') && aiPlayer.resources.wood >= 40 && aiPlayer.resources.iron >= 60) ? 'combat_training' : null;
-        if (tech) {
-          this.handleAction(aiId, {
-            type: 'action_train',
-            payload: { buildingId: researchHub.id, unitType: tech as any }
-          });
-        }
+    // Produce Iron at Iron Works
+    if (ironWorks && aiPlayer.resources.stone >= 5) {
+      if (!ironWorks.productionQueue || ironWorks.productionQueue.length === 0) {
+        this.handleAction(aiId, {
+          type: 'action_train',
+          payload: { buildingId: ironWorks.id, unitType: 'iron_ingot' as any }
+        });
       }
     }
 
-    // AI Defense: Build Watchtowers/Bunkers near Hub if attacked
+    // === DEFENSE ===
     const watchtower = aiEntities.find(e => e.type === 'watchtower');
     const bunker = aiEntities.find(e => e.type === 'bunker');
-    const hubPos = hub?.position;
-    const beingAttacked = hub && hub.hp < hub.maxHp;
+    const beingAttacked = hub && hub.hp < hub.maxHp * 0.8;
     
-    if (builder && beingAttacked && builder.state === 'idle' && hubPos) {
-      if (!watchtower && aiPlayer.resources.wood >= 20 && aiPlayer.resources.stone >= 20 && aiPlayer.resources.iron >= 10) {
+    if (idleBuilder && beingAttacked && hub) {
+      if (!watchtower && aiPlayer.resources.wood >= 20 && aiPlayer.resources.stone >= 20) {
         this.handleAction(aiId, {
           type: 'action_build',
-          payload: { buildingType: 'watchtower', position: { x: hubPos.x + 100, y: hubPos.y }, builderId: builder.id }
+          payload: { buildingType: 'watchtower', position: { x: hub.position.x + 80, y: hub.position.y }, builderId: idleBuilder.id }
         });
       } else if (!bunker && aiPlayer.resources.wood >= 40 && aiPlayer.resources.stone >= 40 && aiPlayer.resources.iron >= 20) {
         this.handleAction(aiId, {
           type: 'action_build',
-          payload: { buildingType: 'bunker', position: { x: hubPos.x - 100, y: hubPos.y }, builderId: builder.id }
+          payload: { buildingType: 'bunker', position: { x: hub.position.x - 80, y: hub.position.y }, builderId: idleBuilder.id }
         });
       }
     }
 
-    // AI Attack: If army size > threshold, launch attack
+    // === OFFENSE ===
     const army = aiEntities.filter(e => e.type === 'knight' || e.type === 'archer' || e.type === 'firebird');
-    const attackThreshold = 14; // Slightly increased
+    const opponentHub = opponentEntities.find(e => e.type === 'hub');
     
-    // Group units for coordinated attack
-    const aiHub = aiEntities.find(e => e.type === 'hub');
-    const rallyPoint = aiHub ? { x: aiHub.position.x + (aiPlayer.color === 'blue' ? 300 : -300), y: aiHub.position.y + (aiPlayer.color === 'blue' ? 300 : -300) } : { x: 2000, y: 2000 };
+    // Worker harassment when army forms early
+    const harassers = army.filter(u => u.type === 'archer').slice(0, 2);
+    harassers.forEach(harasser => {
+      const nearbyEnemyWorker = opponentWorkers.find(w => this.distance(harasser.position, w.position) < 300);
+      if (nearbyEnemyWorker && harasser.state !== 'attacking') {
+        this.handleAction(aiId, {
+          type: 'action_attack',
+          payload: { entityIds: [harasser.id], targetEntityId: nearbyEnemyWorker.id }
+        });
+      }
+    });
 
-    if (army.length >= attackThreshold) {
-      const opponentHub = opponentEntities.find(e => e.type === 'hub');
-      // Prioritize military targets, then buildings, then workers
+    // Main army: Smaller attacks more frequently (lower threshold)
+    const mainArmy = army.filter(u => u.type !== 'archer' || army.length > 8);
+    const attackThreshold = 8; // Much lower - attack sooner!
+    
+    if (mainArmy.length >= attackThreshold && opponentHub) {
       const targets = [...opponentEntities].sort((a, b) => {
         const isMilitary = (type: string) => ['knight', 'archer', 'firebird', 'watchtower', 'bunker'].includes(type);
         const aMil = isMilitary(a.type);
         const bMil = isMilitary(b.type);
         if (aMil && !bMil) return -1;
         if (!aMil && bMil) return 1;
-        
-        const da = this.distance(rallyPoint, a.position);
-        const db = this.distance(rallyPoint, b.position);
-        return (a.hp - b.hp) || (da - db);
+        return this.distance(opponentHub.position, a.position) - this.distance(opponentHub.position, b.position);
       });
 
       const target = targets[0] || opponentHub;
+      const readyArmy = mainArmy.filter(u => u.state === 'idle' || u.state === 'moving').slice(0, 10);
       
-      if (target) {
-        // Coordinated strike: Only attack if units are somewhat grouped
-        const idleArmy = army.filter(u => u.state === 'idle' || u.state === 'moving');
-        if (idleArmy.length > 0) {
-          const readyToAttack = idleArmy.filter(u => this.distance(u.position, rallyPoint) < 500);
-          
-          if (readyToAttack.length > 8) {
-             this.handleAction(aiId, {
-               type: 'action_attack',
-               payload: { entityIds: readyToAttack.map(u => u.id), targetEntityId: target.id }
-             });
-          } else {
-            // Rally before attacking
-            this.handleAction(aiId, {
-              type: 'action_move',
-              payload: { entityIds: idleArmy.map(u => u.id), target: rallyPoint }
-            });
-          }
-        }
+      if (readyArmy.length > 0) {
+        this.handleAction(aiId, {
+          type: 'action_attack',
+          payload: { entityIds: readyArmy.map(u => u.id), targetEntityId: target.id }
+        });
       }
-    } else {
-      // Rally small groups
-      const idleArmy = army.filter(u => u.state === 'idle');
-      if (idleArmy.length > 0) {
+    } else if (mainArmy.length >= 4) {
+      // Rally even small groups
+      const idleArmy = mainArmy.filter(u => u.state === 'idle');
+      if (idleArmy.length > 0 && opponentHub) {
         this.handleAction(aiId, {
           type: 'action_move',
-          payload: { entityIds: idleArmy.map(u => u.id), target: rallyPoint }
+          payload: { entityIds: idleArmy.map(u => u.id), target: opponentHub.position }
         });
       }
     }
 
-    // AI Micro: Kiting and target focus
+    // Aggressive kiting and focus fire
     army.forEach(unit => {
-      const nearbyEnemies = opponentEntities.filter(opp => this.distance(unit.position, opp.position) < 400);
+      if (unit.state === 'attacking') return; // Already attacking
+      
+      const nearbyEnemies = opponentEntities.filter(e => 
+        e.hp > 0 && this.distance(unit.position, e.position) < 350
+      ).sort((a, b) => this.distance(unit.position, a.position) - this.distance(unit.position, b.position));
       
       if (nearbyEnemies.length > 0) {
-        const closestEnemy = nearbyEnemies.sort((a, b) => this.distance(unit.position, a.position) - this.distance(unit.position, b.position))[0];
+        const target = nearbyEnemies[0];
         
-        // Kiting for archers
-        if (unit.type === 'archer' && unit.hp < unit.maxHp * 0.5) {
-          const escapePos = {
-            x: unit.position.x + (unit.position.x - closestEnemy.position.x),
-            y: unit.position.y + (unit.position.y - closestEnemy.position.y)
+        // Kiting for damaged archers
+        if (unit.type === 'archer' && unit.hp < unit.maxHp * 0.4) {
+          const escapeVec = { 
+            x: unit.position.x - target.position.x, 
+            y: unit.position.y - target.position.y 
           };
+          const dist = Math.sqrt(escapeVec.x ** 2 + escapeVec.y ** 2) || 1;
           this.handleAction(aiId, {
             type: 'action_move',
-            payload: { entityIds: [unit.id], target: escapePos }
+            payload: { 
+              entityIds: [unit.id], 
+              target: { 
+                x: unit.position.x + (escapeVec.x / dist) * 100,
+                y: unit.position.y + (escapeVec.y / dist) * 100
+              }
+            }
           });
-        } 
-        // Focus fire for healthy units
-        else if (unit.state !== 'attacking') {
-           this.handleAction(aiId, {
-             type: 'action_attack',
-             payload: { entityIds: [unit.id], targetEntityId: closestEnemy.id }
-           });
+        } else {
+          // Attack the closest enemy
+          this.handleAction(aiId, {
+            type: 'action_attack',
+            payload: { entityIds: [unit.id], targetEntityId: target.id }
+          });
         }
       }
     });
