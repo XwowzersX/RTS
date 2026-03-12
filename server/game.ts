@@ -9,6 +9,8 @@ export class Game {
   private onUpdate: (state: GameState) => void;
   private aiPlayerId: string | null = null;
   private mode: 'solo' | 'multiplayer';
+  private tickCount: number = 0;
+  private garrisonedSet: Set<string> = new Set();
 
   constructor(id: string, onUpdate: (state: GameState) => void, mode: 'solo' | 'multiplayer' = 'multiplayer') {
     this.id = id;
@@ -134,14 +136,27 @@ export class Game {
 
   private tick() {
     if (this.state.status !== 'playing') return;
+    this.tickCount++;
 
-    // AI Logic Tick
-    if (this.aiPlayerId) {
+    // AI Logic: only every 5th tick (2 TPS) - enough for good AI, way less CPU
+    if (this.aiPlayerId && this.tickCount % 5 === 0) {
       this.handleAILogic(this.aiPlayerId);
     }
 
-    // Game Logic Loop
-    this.updateFogOfWar();
+    // Pre-build garrison lookup set once per tick (O(n) instead of O(n²) per entity)
+    this.garrisonedSet.clear();
+    for (const eId in this.state.entities) {
+      const b = this.state.entities[eId];
+      if (b.type === 'bunker') {
+        const ids: string[] = (b as any).garrisonedIds || [];
+        ids.forEach(id => this.garrisonedSet.add(id));
+      }
+    }
+
+    // Fog of War: only every 3rd tick (3.3 TPS is fine for vision)
+    if (this.tickCount % 3 === 0) {
+      this.updateFogOfWar();
+    }
     for (const entityId in this.state.entities) {
       const entity = this.state.entities[entityId];
       if (entity.hp <= 0) {
@@ -472,7 +487,7 @@ export class Game {
   }
 
   private updateFogOfWar() {
-    const GRID_SIZE = 100;
+    const GRID_SIZE = 50; // 50x50 = 2500 cells, not 10000
     const CELL_SIZE = MAP_WIDTH / GRID_SIZE;
     
     for (const playerId in this.state.players) {
@@ -483,6 +498,12 @@ export class Game {
       const fog = this.state.fogOfWar![playerId];
       const entities = Object.values(this.state.entities).filter(e => e.playerId === playerId);
       
+      // Pre-compute vision ranges squared to avoid sqrt in inner loop
+      const entityVision = entities.map(e => {
+        const range = e.type === 'archer' ? 300 : e.type === 'hub' ? 400 : e.type === 'watchtower' ? 500 : 200;
+        return { px: e.position.x, py: e.position.y, rangeSq: range * range };
+      });
+      
       for (let i = 0; i < fog.length; i++) {
         const gx = i % GRID_SIZE;
         const gy = Math.floor(i / GRID_SIZE);
@@ -490,11 +511,10 @@ export class Game {
         const worldY = gy * CELL_SIZE + CELL_SIZE / 2;
         
         let visible = false;
-        for (const entity of entities) {
-          const visionRange = entity.type === 'archer' ? 300 : entity.type === 'hub' ? 400 : entity.type === 'watchtower' ? 500 : 200;
-          const dx = worldX - entity.position.x;
-          const dy = worldY - entity.position.y;
-          if (dx*dx + dy*dy < visionRange*visionRange) {
+        for (const ev of entityVision) {
+          const dx = worldX - ev.px;
+          const dy = worldY - ev.py;
+          if (dx*dx + dy*dy < ev.rangeSq) {
             visible = true;
             break;
           }
@@ -569,16 +589,8 @@ export class Game {
       if (hub) {
         const dist = this.distance(entity.position, hub.position);
         
-        // Garrisoned units skip behavior
-        let isGarrisoned = false;
-        for (const eId in this.state.entities) {
-          const b = this.state.entities[eId];
-          if (b.type === 'bunker' && (b as any).garrisonedIds?.includes(entity.id)) {
-            isGarrisoned = true;
-            break;
-          }
-        }
-        if (isGarrisoned) return;
+        // Garrisoned units skip behavior (O(1) lookup)
+        if (this.garrisonedSet.has(entity.id)) return;
 
         if (dist < 50) {
           const type = entity.type === 'lumberjack' ? 'wood' : 'stone';
@@ -622,16 +634,8 @@ export class Game {
              }
           }
 
-          // Damage logic (simplified for archers in bunkers)
-          let isGarrisoned = false;
-          for (const eId in this.state.entities) {
-            const b = this.state.entities[eId];
-            if (b.type === 'bunker' && (b as any).garrisonedIds?.includes(entity.id)) {
-              isGarrisoned = true;
-              break;
-            }
-          }
-          if (isGarrisoned) return; // Garrisoned units don't move/attack normally
+          // Garrisoned units don't attack normally (O(1) lookup)
+          if (this.garrisonedSet.has(entity.id)) return;
 
           if (dist <= stats.range + 10) { 
              target.hp -= attackDamage; 
