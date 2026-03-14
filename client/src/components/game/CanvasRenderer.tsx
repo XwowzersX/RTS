@@ -238,7 +238,7 @@ export function CanvasRenderer({
     gameState.resources.forEach(res => {
       // FOG OF WAR CHECK: Hide resources in fog
       if (playerId && gameState.fogOfWar?.[playerId]) {
-        const GRID_SIZE = 100;
+        const GRID_SIZE = 50;
         const CELL_SIZE = MAP_WIDTH / GRID_SIZE;
         const gx = Math.floor(res.position.x / CELL_SIZE);
         const gy = Math.floor(res.position.y / CELL_SIZE);
@@ -309,7 +309,7 @@ export function CanvasRenderer({
     Object.values(gameState.entities).forEach(entity => {
       // FOG OF WAR CHECK: Hide enemy entities in fog
       if (playerId && gameState.fogOfWar?.[playerId]) {
-        const GRID_SIZE = 100;
+        const GRID_SIZE = 50;
         const CELL_SIZE = MAP_WIDTH / GRID_SIZE;
         const gx = Math.floor(entity.position.x / CELL_SIZE);
         const gy = Math.floor(entity.position.y / CELL_SIZE);
@@ -592,7 +592,7 @@ export function CanvasRenderer({
 
     // 4. Fog of War Rendering
     if (playerId && gameState.fogOfWar?.[playerId]) {
-      const GRID_SIZE = 100;
+      const GRID_SIZE = 50;
       const CELL_SIZE = MAP_WIDTH / GRID_SIZE;
       const fog = gameState.fogOfWar[playerId];
       
