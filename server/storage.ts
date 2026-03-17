@@ -9,6 +9,7 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserStats(id: number, stats: any): Promise<User>;
+  unlockCampaignMission(userId: number, missionIndex: number): Promise<User>;
   
   // Game Storage
   createGame(mode?: 'solo' | 'multiplayer' | 'survival'): Game;
@@ -59,6 +60,14 @@ export class MemStorage implements IStorage {
       .set(updatedStats)
       .where(eq(users.id, id))
       .returning();
+    return user;
+  }
+
+  async unlockCampaignMission(userId: number, missionIndex: number): Promise<User> {
+    const [current] = await db.select().from(users).where(eq(users.id, userId));
+    if (!current) throw new Error("User not found");
+    const newMask = (current.campaign_missions || 0) | (1 << missionIndex);
+    const [user] = await db.update(users).set({ campaign_missions: newMask }).where(eq(users.id, userId)).returning();
     return user;
   }
 

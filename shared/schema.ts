@@ -151,6 +151,7 @@ export const users = pgTable("users", {
   kills: integer("kills").default(0),
   resources_gathered: integer("resources_gathered").default(0),
   play_time: integer("play_time").default(0), // in seconds
+  campaign_missions: integer("campaign_missions").default(0), // bitmask: bit 0 = mission 1 complete, etc.
 });
 
 export const insertUserSchema = createInsertSchema(users).extend({

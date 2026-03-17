@@ -156,7 +156,8 @@ export default function Lobby() {
         )}
       </div>
 
-      <div className="relative z-10 w-full max-w-4xl flex flex-col items-center gap-16">
+      <div className="relative z-10 w-full max-w-4xl flex flex-col items-center gap-12">
+        {/* Logo */}
         <div className="text-center group cursor-default">
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
@@ -174,19 +175,9 @@ export default function Lobby() {
           </p>
         </div>
 
-        <div className="flex flex-col gap-6 w-full max-w-3xl px-4">
-          {/* Campaign - featured button */}
-          <div className="w-full">
-            <MenuButton 
-              label="Campaign" 
-              sub="The Veth War — Story Mode"
-              fireColor="rgba(239, 68, 68, 0.7)" 
-              onClick={() => handleMenuClick('/campaign')}
-              featured
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="flex flex-col gap-5 w-full max-w-3xl px-4">
+          {/* Row 1: Quick Play | Multiplayer | Stats — all on same line */}
+          <div className="grid grid-cols-3 gap-5">
             <MenuButton 
               label="Quick Play" 
               sub="Solo vs IronMind AI"
@@ -199,36 +190,39 @@ export default function Lobby() {
               fireColor="rgba(59, 130, 246, 0.6)" 
               onClick={() => handleMenuClick(() => setView('multiplayer'))}
             />
-          </div>
-
-          {user && (
-            <div className="flex justify-center">
+            {user ? (
               <MenuButton 
                 label="Stats" 
                 sub="Commander Record"
                 fireColor="rgba(168, 85, 247, 0.6)" 
                 onClick={() => handleMenuClick('/stats')}
-                className="w-full md:w-1/2"
               />
-            </div>
-          )}
-          {!user && (
-            <div className="text-center">
-              <Link href="/auth">
-                <Button variant="link" className="text-white/40 hover:text-white uppercase tracking-[0.5em] text-xs">
-                  Login to unlock Stats & Rankings
-                </Button>
+            ) : (
+              <Link href="/auth" className="block">
+                <MenuButton 
+                  label="Stats" 
+                  sub="Login to unlock"
+                  fireColor="rgba(168, 85, 247, 0.3)" 
+                  onClick={() => {}}
+                  locked
+                />
               </Link>
-            </div>
-          )}
+            )}
+          </div>
+
+          {/* Row 2: Campaign — full width */}
+          <MenuButton 
+            label="Campaign" 
+            sub="The Veth War — Story Mode"
+            fireColor="rgba(239, 68, 68, 0.7)" 
+            onClick={() => handleMenuClick('/campaign')}
+            featured
+            campaignMissions={user?.campaign_missions ?? null}
+          />
         </div>
       </div>
 
       <style dangerouslySetInnerHTML={{ __html: `
-        .fly-in-effect {
-          animation: fly-in 0.6s forwards cubic-bezier(0.7, 0, 0.3, 1);
-          pointer-events: none;
-        }
         @keyframes fly-in {
           0% { transform: scale(1); filter: blur(0); }
           100% { transform: scale(20); opacity: 0; filter: blur(40px); }
@@ -244,10 +238,11 @@ export default function Lobby() {
   );
 }
 
-function MenuButton({ label, sub, fireColor, onClick, className = "", featured = false }: any) {
+function MenuButton({ label, sub, fireColor, onClick, featured = false, locked = false, campaignMissions = null }: any) {
   const [isClicked, setIsClicked] = useState(false);
 
   const handleClick = () => {
+    if (locked) return;
     setIsClicked(true);
     setTimeout(() => {
       onClick();
@@ -255,20 +250,22 @@ function MenuButton({ label, sub, fireColor, onClick, className = "", featured =
     }, 100);
   };
 
+  const mission1Done = campaignMissions !== null && (campaignMissions & 1) !== 0;
+
   return (
     <motion.button
       whileHover={{ 
-        rotateX: featured ? 0 : -10, 
-        rotateY: featured ? 0 : 10,
-        scale: 1.03,
-        boxShadow: `0 0 ${featured ? 80 : 40}px ${fireColor}`
+        rotateX: featured ? 0 : -8, 
+        rotateY: featured ? 0 : 8,
+        scale: locked ? 1 : 1.03,
+        boxShadow: locked ? 'none' : `0 0 ${featured ? 80 : 35}px ${fireColor}`
       }}
-      whileTap={{ scale: 0.97 }}
+      whileTap={{ scale: locked ? 1 : 0.97 }}
       onClick={handleClick}
       className={`
         relative ${featured ? 'h-24' : 'h-32'} bg-white/5 border overflow-hidden group transition-all duration-300
-        flex flex-col items-center justify-center gap-1 w-full ${className}
-        ${featured ? 'border-red-900/40 hover:border-red-500/60' : 'border-white/10 hover:border-white/40'}
+        flex flex-col items-center justify-center gap-1 w-full
+        ${featured ? 'border-red-900/40 hover:border-red-500/60' : locked ? 'border-white/5 opacity-40 cursor-not-allowed' : 'border-white/10 hover:border-white/40'}
         ${isClicked ? 'z-50' : ''}
       `}
       style={{ perspective: "1000px" }}
@@ -283,27 +280,39 @@ function MenuButton({ label, sub, fireColor, onClick, className = "", featured =
         />
       )}
 
-      <div 
-        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-        style={{
-          background: `radial-gradient(circle at 50% 120%, ${fireColor} 0%, transparent 80%)`,
-          filter: 'blur(15px)'
-        }}
-      />
+      {!locked && (
+        <div 
+          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+          style={{
+            background: `radial-gradient(circle at 50% 120%, ${fireColor} 0%, transparent 80%)`,
+            filter: 'blur(15px)'
+          }}
+        />
+      )}
       
-      {/* Animated Fire-like lines */}
-      <div className="absolute inset-0 opacity-0 group-hover:opacity-20 pointer-events-none">
-        <div className="absolute bottom-0 left-1/4 w-1 h-full bg-gradient-to-t from-white to-transparent animate-bounce [animation-duration:1s]" />
-        <div className="absolute bottom-0 left-1/2 w-1 h-3/4 bg-gradient-to-t from-white to-transparent animate-bounce [animation-duration:1.5s]" />
-        <div className="absolute bottom-0 left-3/4 w-1 h-full bg-gradient-to-t from-white to-transparent animate-bounce [animation-duration:1.2s]" />
-      </div>
+      {/* Animated fire lines */}
+      {!locked && (
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-20 pointer-events-none">
+          <div className="absolute bottom-0 left-1/4 w-1 h-full bg-gradient-to-t from-white to-transparent animate-bounce [animation-duration:1s]" />
+          <div className="absolute bottom-0 left-1/2 w-1 h-3/4 bg-gradient-to-t from-white to-transparent animate-bounce [animation-duration:1.5s]" />
+          <div className="absolute bottom-0 left-3/4 w-1 h-full bg-gradient-to-t from-white to-transparent animate-bounce [animation-duration:1.2s]" />
+        </div>
+      )}
 
       {featured && (
-        <span className="text-[10px] font-mono tracking-[0.5em] text-red-400/70 uppercase mb-0.5 relative z-10">
-          ▶ Story Mode — The Veth War
-        </span>
+        <div className="flex items-center gap-3 relative z-10 mb-0.5">
+          <span className="text-[10px] font-mono tracking-[0.5em] text-red-400/70 uppercase">
+            ▶ Story Mode — The Veth War
+          </span>
+          {mission1Done && (
+            <span className="text-[9px] font-mono bg-yellow-500/20 border border-yellow-500/40 text-yellow-400 px-2 py-0.5 rounded-full uppercase tracking-widest">
+              ✓ M1 Complete
+            </span>
+          )}
+        </div>
       )}
-      <span className={`${featured ? 'text-4xl' : 'text-3xl'} font-black font-cinzel tracking-[0.2em] relative z-10 group-hover:text-white group-hover:scale-105 transition-all duration-300`}>
+
+      <span className={`${featured ? 'text-4xl' : 'text-2xl'} font-black font-cinzel tracking-[0.2em] relative z-10 group-hover:text-white group-hover:scale-105 transition-all duration-300`}>
         {label}
       </span>
       <span className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground relative z-10 font-bold group-hover:text-white/60 transition-colors">

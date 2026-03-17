@@ -256,6 +256,11 @@ export class Game {
           if (hubAlive) {
             this.state.winner = humanId;
             this.incrementStat(humanId, 'wins', 1);
+            // Save campaign mission 1 completion to DB
+            const humanPlayer = this.state.players[humanId];
+            if (humanPlayer && (humanPlayer as any).userId) {
+              storage.unlockCampaignMission((humanPlayer as any).userId, 0).catch(console.error);
+            }
           }
         }
         this.stop();
