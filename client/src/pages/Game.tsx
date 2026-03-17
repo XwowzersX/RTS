@@ -196,16 +196,46 @@ export default function Game() {
 
       {/* --- HUD OVERLAY --- */}
 
+      {/* Survival Mode: Mission Objective Banner */}
+      {gameState?.mode === 'survival' && gameState.status === 'playing' && (
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center pt-3 pointer-events-none">
+          {/* Countdown Timer */}
+          {gameState.survivalTimer !== undefined && (() => {
+            const ms = gameState.survivalTimer;
+            const mins = Math.floor(ms / 60000);
+            const secs = Math.floor((ms % 60000) / 1000);
+            const isUrgent = ms < 60000;
+            return (
+              <div className={`flex flex-col items-center ${isUrgent ? 'animate-pulse' : ''}`}>
+                <div
+                  className="font-mono font-black text-4xl tracking-widest px-6 py-2 rounded-xl border shadow-2xl"
+                  style={{
+                    background: isUrgent ? 'rgba(120,0,0,0.9)' : 'rgba(0,0,0,0.85)',
+                    borderColor: isUrgent ? '#ff2200' : '#ff330030',
+                    color: isUrgent ? '#ff6666' : '#ff4444',
+                    textShadow: `0 0 20px ${isUrgent ? '#ff0000' : '#cc000060'}`,
+                  }}
+                >
+                  {mins}:{secs.toString().padStart(2, '0')}
+                </div>
+                <div className="text-xs font-rajdhani uppercase tracking-[0.3em] mt-1 opacity-70 text-red-400">
+                  Hold the Line — Veth Assault
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
       {/* Top Bar: Resources */}
       <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-start pointer-events-none">
         <ResourcesDisplay playerState={myPlayer} className="pointer-events-auto" />
         
         {/* Game ID & Copy (Top Right) */}
         <div className="flex flex-col items-end gap-2 pointer-events-auto">
-          {gameState?.startTime && gameState.status === 'playing' && (
+          {gameState?.startTime && gameState.status === 'playing' && gameState.mode !== 'survival' && (
             <div className="bg-black/60 border border-white/10 backdrop-blur-md px-4 py-1 rounded-full text-primary font-mono font-bold animate-pulse">
               {(() => {
-                // Use a stable reference for current time to avoid drift during render
                 const startTime = gameState.startTime;
                 const seconds = Math.max(0, Math.floor((Date.now() - startTime) / 1000));
                 const mins = Math.floor(seconds / 60);
@@ -287,14 +317,44 @@ export default function Game() {
 
       {/* Game End Overlay */}
       {gameState?.status === 'ended' && (
-        <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-50 pointer-events-auto animate-in fade-in duration-1000">
-          <h1 className="text-6xl font-black text-amber-500 mb-4 font-cinzel">GAME OVER</h1>
-          <p className="text-2xl text-white mb-8">
-            {gameState.winner === joinMutation.data?.playerId ? "VICTORY" : "DEFEAT"}
-          </p>
-          <Button size="lg" onClick={() => window.location.href = '/'}>
-            Return to Lobby
-          </Button>
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-50 pointer-events-auto animate-in fade-in duration-1000"
+          style={{ background: gameState.mode === 'survival' ? 'rgba(20,0,0,0.92)' : 'rgba(0,0,0,0.85)' }}>
+          {gameState.mode === 'survival' ? (
+            gameState.winner === joinMutation.data?.playerId ? (
+              <>
+                <div className="text-yellow-300 text-xs font-mono uppercase tracking-[0.4em] mb-3 opacity-70">Mission Complete</div>
+                <h1 className="text-6xl font-black font-cinzel mb-2" style={{ color: '#ffd700', textShadow: '0 0 40px #ffaa0080' }}>SURVIVOR</h1>
+                <p className="text-white/70 text-lg mb-2 font-rajdhani">You held the line against the Veth for 10 minutes.</p>
+                <p className="text-white/40 text-sm mb-10 font-mono">Earth Defense Coalition — Command Impressed</p>
+              </>
+            ) : (
+              <>
+                <div className="text-red-400 text-xs font-mono uppercase tracking-[0.4em] mb-3 opacity-70">Mission Failed</div>
+                <h1 className="text-6xl font-black font-cinzel mb-2 text-red-500" style={{ textShadow: '0 0 40px #ff000080' }}>OVERRUN</h1>
+                <p className="text-white/70 text-lg mb-2 font-rajdhani">The Veth consumed your base.</p>
+                <p className="text-white/40 text-sm mb-10 font-mono">The line did not hold.</p>
+              </>
+            )
+          ) : (
+            <>
+              <h1 className="text-6xl font-black text-amber-500 mb-4 font-cinzel">GAME OVER</h1>
+              <p className="text-2xl text-white mb-8">
+                {gameState.winner === joinMutation.data?.playerId ? "VICTORY" : "DEFEAT"}
+              </p>
+            </>
+          )}
+          <div className="flex gap-4">
+            {gameState.mode === 'survival' && (
+              <Button size="lg" variant="outline"
+                className="border-red-900 text-red-300 hover:bg-red-900/20"
+                onClick={() => window.location.href = '/campaign'}>
+                Back to Campaign
+              </Button>
+            )}
+            <Button size="lg" onClick={() => window.location.href = '/'}>
+              Return to Lobby
+            </Button>
+          </div>
         </div>
       )}
     </div>

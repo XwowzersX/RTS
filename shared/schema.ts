@@ -98,16 +98,27 @@ export interface PlayerState {
   researched: string[];
 }
 
+export interface Obstacle {
+  id: string;
+  x: number;
+  y: number;
+  radius: number;
+  type: 'ruin' | 'rock' | 'wreck';
+}
+
 export interface GameState {
   id: string;
   status: 'waiting' | 'playing' | 'ended';
+  mode?: 'solo' | 'multiplayer' | 'survival';
   players: Record<string, PlayerState>;
   entities: Record<string, Entity>;
   resources: { id: string, type: 'tree' | 'rock', position: Position, amount: number }[];
   winner?: string;
   startTime?: number;
   resourceClusters?: Position[];
-  fogOfWar?: Record<string, boolean[]>; // playerId -> grid of visibility (100x100 for 4000x4000 map)
+  fogOfWar?: Record<string, boolean[]>;
+  survivalTimer?: number; // ms remaining (survival mode)
+  obstacles?: Obstacle[];
 }
 
 // --- WebSocket Protocol ---

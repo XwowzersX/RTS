@@ -1,4 +1,4 @@
-import { PRODUCTION_TIME, UNIT_STATS, BUILDING_STATS, COSTS, MAP_WIDTH, MAP_HEIGHT, type GameState, type PlayerState, type Entity, type Position, type UnitType, type BuildingType, type ResourceType } from "@shared/schema";
+import { PRODUCTION_TIME, UNIT_STATS, BUILDING_STATS, COSTS, MAP_WIDTH, MAP_HEIGHT, type GameState, type PlayerState, type Entity, type Position, type UnitType, type BuildingType, type ResourceType, type Obstacle } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { storage } from "./storage";
 
@@ -7,18 +7,19 @@ export class Game {
   state: GameState;
   private loopInterval: NodeJS.Timeout | null = null;
   private onUpdate: (state: GameState) => void;
-  private aiPlayerId: string | null = null;
-  private mode: 'solo' | 'multiplayer';
+  private aiPlayerIds: string[] = [];
+  private mode: 'solo' | 'multiplayer' | 'survival';
   private tickCount: number = 0;
   private garrisonedSet: Set<string> = new Set();
 
-  constructor(id: string, onUpdate: (state: GameState) => void, mode: 'solo' | 'multiplayer' = 'multiplayer') {
+  constructor(id: string, onUpdate: (state: GameState) => void, mode: 'solo' | 'multiplayer' | 'survival' = 'multiplayer') {
     this.id = id;
     this.onUpdate = onUpdate;
     this.mode = mode;
     this.state = {
       id,
       status: 'waiting',
+      mode,
       players: {},
       entities: {},
       resources: [],
@@ -26,6 +27,39 @@ export class Game {
       fogOfWar: {},
     };
     this.state.resources = this.generateResources();
+    if (mode === 'survival') {
+      this.state.obstacles = this.generateObstacles();
+    }
+  }
+
+  private generateObstacles(): Obstacle[] {
+    const obstacles: Obstacle[] = [];
+    const types: Obstacle['type'][] = ['ruin', 'rock', 'wreck'];
+    const safeZones = [
+      { x: 2000, y: 2000, r: 400 }, // Player center
+      { x: 200,  y: 200,  r: 350 }, // AI corner 1
+      { x: MAP_WIDTH - 200, y: 200, r: 350 }, // AI corner 2
+      { x: 200,  y: MAP_HEIGHT - 200, r: 350 }, // AI corner 3
+    ];
+
+    const isSafe = (x: number, y: number, r: number) =>
+      safeZones.some(z => Math.hypot(x - z.x, y - z.y) < z.r + r + 80);
+
+    let attempts = 0;
+    while (obstacles.length < 28 && attempts < 500) {
+      attempts++;
+      const x = 300 + Math.random() * (MAP_WIDTH - 600);
+      const y = 300 + Math.random() * (MAP_HEIGHT - 600);
+      const radius = 40 + Math.random() * 80;
+      if (!isSafe(x, y, radius)) {
+        obstacles.push({
+          id: `obs-${obstacles.length}`,
+          x, y, radius,
+          type: types[Math.floor(Math.random() * types.length)]
+        });
+      }
+    }
+    return obstacles;
   }
 
   private generateResources() {
@@ -71,18 +105,31 @@ export class Game {
     return resources;
   }
 
-  addPlayer(name: string): string {
+  addPlayer(name: string, forceColor?: string, forcePos?: { x: number; y: number }): string {
     const playerId = randomUUID();
-    const color = Object.keys(this.state.players).length === 0 ? 'blue' : 'red';
-    
-    // Initial Hub Position
-    const startX = color === 'blue' ? 100 : MAP_WIDTH - 100;
-    const startY = color === 'blue' ? 100 : MAP_HEIGHT - 100;
+    const playerCount = Object.keys(this.state.players).length;
+    const color = forceColor ?? (playerCount === 0 ? 'blue' : 'red');
+
+    // Start position
+    let startX: number, startY: number;
+    if (forcePos) {
+      startX = forcePos.x; startY = forcePos.y;
+    } else if (this.mode === 'survival' && playerCount === 0) {
+      // Human player starts at center
+      startX = MAP_WIDTH / 2; startY = MAP_HEIGHT / 2;
+    } else {
+      startX = color === 'blue' ? 100 : MAP_WIDTH - 100;
+      startY = color === 'blue' ? 100 : MAP_HEIGHT - 100;
+    }
+
+    const startResources = this.mode === 'survival' && playerCount === 0
+      ? { wood: 200, stone: 150, iron: 40 } // Bonus resources for survival
+      : { wood: 50, stone: 30, iron: 10 };
 
     this.state.players[playerId] = {
       id: playerId,
       color,
-      resources: { wood: 50, stone: 30, iron: 10 },
+      resources: startResources,
       population: 0,
       researched: [],
     };
@@ -90,42 +137,101 @@ export class Game {
     // Create Hub
     const hubId = randomUUID();
     this.state.entities[hubId] = {
-      id: hubId,
-      playerId,
+      id: hubId, playerId,
       type: 'hub',
       position: { x: startX, y: startY },
-      hp: BUILDING_STATS.hub.hp,
-      maxHp: BUILDING_STATS.hub.hp,
+      hp: BUILDING_STATS.hub.hp, maxHp: BUILDING_STATS.hub.hp,
       state: 'idle'
     };
 
     // Create 1 Worker
     const workerId = randomUUID();
     this.state.entities[workerId] = {
-      id: workerId,
-      playerId,
+      id: workerId, playerId,
       type: 'lumberjack',
       position: { x: startX + 50, y: startY + 50 },
-      hp: UNIT_STATS.lumberjack.hp,
-      maxHp: UNIT_STATS.lumberjack.hp,
+      hp: UNIT_STATS.lumberjack.hp, maxHp: UNIT_STATS.lumberjack.hp,
       state: 'idle'
     };
 
-    // Auto-start if 2 players (multiplayer) or 1 player + AI (solo)
-    if (Object.keys(this.state.players).length === 2 && this.state.status === 'waiting') {
+    // Auto-start logic
+    if (this.mode === 'survival' && playerCount === 0) {
+      // Add 3 AI players at corners, then start
+      this.setupSurvivalAI();
+      this.start();
+    } else if (Object.keys(this.state.players).length === 2 && this.state.status === 'waiting') {
       this.start();
     } else if (this.mode === 'solo' && Object.keys(this.state.players).length === 1 && this.state.status === 'waiting') {
-      // Add AI as second player for solo mode
-      this.aiPlayerId = this.addPlayer("IronMind AI");
-      this.start();
+      // addPlayer("IronMind AI") will see 2 players and call start() internally
+      const aiId = this.addPlayer("IronMind AI");
+      this.aiPlayerIds = [aiId];
+      // Do NOT call start() again — inner addPlayer already did it
     }
 
     return playerId;
   }
 
+  private setupSurvivalAI() {
+    // 3 Veth AI bases at 3 corners
+    const corners = [
+      { x: 200,            y: 200,             label: 'Veth Alpha' },
+      { x: MAP_WIDTH - 200, y: 200,            label: 'Veth Beta' },
+      { x: 200,            y: MAP_HEIGHT - 200, label: 'Veth Gamma' },
+    ];
+
+    corners.forEach(corner => {
+      const aiId = randomUUID();
+      this.state.players[aiId] = {
+        id: aiId, color: 'red',
+        resources: { wood: 500, stone: 500, iron: 200 },
+        population: 0, researched: ['speed_boost', 'combat_training'],
+      };
+      this.aiPlayerIds.push(aiId);
+
+      // Hub
+      const hubId = randomUUID();
+      this.state.entities[hubId] = {
+        id: hubId, playerId: aiId, type: 'hub',
+        position: { x: corner.x, y: corner.y },
+        hp: BUILDING_STATS.hub.hp, maxHp: BUILDING_STATS.hub.hp,
+        state: 'idle'
+      };
+
+      // Pre-built barracks
+      const barracksId = randomUUID();
+      this.state.entities[barracksId] = {
+        id: barracksId, playerId: aiId, type: 'barracks',
+        position: { x: corner.x + 120, y: corner.y },
+        hp: BUILDING_STATS.barracks.hp, maxHp: BUILDING_STATS.barracks.hp,
+        state: 'idle'
+      };
+
+      // Starting army of 6 units spread out toward player
+      const toward = { x: MAP_WIDTH / 2, y: MAP_HEIGHT / 2 };
+      const dx = toward.x - corner.x, dy = toward.y - corner.y;
+      const dist = Math.hypot(dx, dy);
+      for (let i = 0; i < 6; i++) {
+        const spread = (i - 2.5) * 60;
+        const perpX = -dy / dist * spread;
+        const perpY =  dx / dist * spread;
+        const unitId = randomUUID();
+        const unitType: UnitType = i % 3 === 0 ? 'archer' : 'knight';
+        this.state.entities[unitId] = {
+          id: unitId, playerId: aiId, type: unitType,
+          position: { x: corner.x + perpX + dx / dist * 200, y: corner.y + perpY + dy / dist * 200 },
+          hp: UNIT_STATS[unitType].hp, maxHp: UNIT_STATS[unitType].hp,
+          state: 'idle'
+        };
+      }
+    });
+  }
+
   start() {
     this.state.status = 'playing';
     this.state.startTime = Date.now();
+    if (this.mode === 'survival') {
+      this.state.survivalTimer = 600000; // 10 minutes in ms
+    }
     this.loopInterval = setInterval(() => this.tick(), 1000 / 10); // 10 TPS
   }
 
@@ -138,9 +244,28 @@ export class Game {
     if (this.state.status !== 'playing') return;
     this.tickCount++;
 
-    // AI Logic: only every 5th tick (2 TPS) - enough for good AI, way less CPU
-    if (this.aiPlayerId && this.tickCount % 5 === 0) {
-      this.handleAILogic(this.aiPlayerId);
+    // Survival timer countdown
+    if (this.mode === 'survival' && this.state.survivalTimer !== undefined) {
+      this.state.survivalTimer -= 100;
+      if (this.state.survivalTimer <= 0) {
+        this.state.survivalTimer = 0;
+        // Player wins if their hub is still alive
+        const humanId = Object.keys(this.state.players).find(id => !this.aiPlayerIds.includes(id));
+        if (humanId) {
+          const hubAlive = Object.values(this.state.entities).some(e => e.type === 'hub' && e.playerId === humanId && e.hp > 0);
+          if (hubAlive) {
+            this.state.winner = humanId;
+            this.incrementStat(humanId, 'wins', 1);
+          }
+        }
+        this.stop();
+        return;
+      }
+    }
+
+    // AI Logic: only every 5th tick (2 TPS)
+    if (this.aiPlayerIds.length > 0 && this.tickCount % 5 === 0) {
+      this.aiPlayerIds.forEach(aiId => this.handleAILogic(aiId));
     }
 
     // Pre-build garrison lookup set once per tick (O(n) instead of O(n²) per entity)
@@ -169,13 +294,25 @@ export class Game {
         }
 
         if (entity.type === 'hub') {
-          this.state.winner = Object.keys(this.state.players).find(id => id !== entity.playerId);
-          if (this.state.winner) {
-            this.incrementStat(this.state.winner, 'wins', 1);
-            const loser = Object.keys(this.state.players).find(id => id !== this.state.winner);
-            if (loser) this.incrementStat(loser, 'losses', 1);
+          if (this.mode === 'survival') {
+            // In survival: only end game if the human player's hub is destroyed
+            const humanId = Object.keys(this.state.players).find(id => !this.aiPlayerIds.includes(id));
+            if (entity.playerId === humanId) {
+              // Human hub destroyed → defeat
+              if (humanId) this.incrementStat(humanId, 'losses', 1);
+              this.stop();
+            }
+            // If an AI hub is destroyed in survival, just remove it (don't end game)
+          } else {
+            // Normal mode: destroying any hub ends the game
+            this.state.winner = Object.keys(this.state.players).find(id => id !== entity.playerId);
+            if (this.state.winner) {
+              this.incrementStat(this.state.winner, 'wins', 1);
+              const loser = Object.keys(this.state.players).find(id => id !== this.state.winner);
+              if (loser) this.incrementStat(loser, 'losses', 1);
+            }
+            this.stop();
           }
-          this.stop();
         }
         
         // Release garrisoned units if bunker destroyed
@@ -235,7 +372,10 @@ export class Game {
   private handleAILogic(aiId: string) {
     const aiPlayer = this.state.players[aiId];
     const aiEntities = Object.values(this.state.entities).filter(e => e.playerId === aiId);
-    const opponentId = Object.keys(this.state.players).find(id => id !== aiId);
+    // In survival mode, always target the human player
+    const opponentId = this.mode === 'survival'
+      ? Object.keys(this.state.players).find(id => !this.aiPlayerIds.includes(id))
+      : Object.keys(this.state.players).find(id => id !== aiId);
     if (!opponentId) return;
     const opponentEntities = Object.values(this.state.entities).filter(e => e.playerId === opponentId);
     const opponentWorkers = opponentEntities.filter(e => e.type === 'lumberjack' || e.type === 'miner');
@@ -415,7 +555,7 @@ export class Game {
 
     // Main army: Smaller attacks more frequently (lower threshold)
     const mainArmy = army.filter(u => u.type !== 'archer' || army.length > 8);
-    const attackThreshold = 8; // Much lower - attack sooner!
+    const attackThreshold = this.mode === 'survival' ? 3 : 8; // Survival: attack as soon as 3 units ready
     
     if (mainArmy.length >= attackThreshold && opponentHub) {
       const targets = [...opponentEntities].sort((a, b) => {

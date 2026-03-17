@@ -19,6 +19,12 @@ export async function registerRoutes(
     res.json({ gameId: game.id });
   });
 
+  // Create Survival Game (Campaign Mission 1)
+  app.post('/api/game/create-survival', (req, res) => {
+    const game = storage.createGame('survival');
+    res.json({ gameId: game.id });
+  });
+
   // Join Game
   app.post(api.game.join.path, (req, res) => {
     const { gameId } = req.body;

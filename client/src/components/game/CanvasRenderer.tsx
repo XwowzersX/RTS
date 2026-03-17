@@ -49,8 +49,15 @@ export function CanvasRenderer({
     if (!hasCentered && gameState && playerId) {
       const player = gameState.players[playerId];
       if (player) {
-        const startX = player.color === 'blue' ? 0 : MAP_WIDTH - window.innerWidth;
-        const startY = player.color === 'blue' ? 0 : MAP_HEIGHT - window.innerHeight;
+        let startX: number, startY: number;
+        if (gameState.mode === 'survival') {
+          // Center on player hub (map center)
+          startX = MAP_WIDTH / 2 - window.innerWidth / 2;
+          startY = MAP_HEIGHT / 2 - window.innerHeight / 2;
+        } else {
+          startX = player.color === 'blue' ? 0 : MAP_WIDTH - window.innerWidth;
+          startY = player.color === 'blue' ? 0 : MAP_HEIGHT - window.innerHeight;
+        }
         setOffset({ 
           x: Math.max(0, Math.min(MAP_WIDTH - window.innerWidth, startX)), 
           y: Math.max(0, Math.min(MAP_HEIGHT - window.innerHeight, startY)) 
@@ -197,21 +204,34 @@ export function CanvasRenderer({
     ctx.scale(zoom, zoom);
     ctx.translate(-offset.x, -offset.y);
     
-    // Water/Infinite ground
-    ctx.fillStyle = "#111418";
+    const isSurvival = gameState?.mode === 'survival';
+
+    // Infinite void background
+    ctx.fillStyle = isSurvival ? "#0a0004" : "#111418";
     ctx.fillRect(-10000, -10000, 20000, 20000);
 
     // Map Border
-    ctx.strokeStyle = "#333";
-    ctx.lineWidth = 5;
+    ctx.strokeStyle = isSurvival ? "#6b0000" : "#333";
+    ctx.lineWidth = isSurvival ? 8 : 5;
     ctx.strokeRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
     
-    // Background color for playable area
-    ctx.fillStyle = "#1a1d23";
-    ctx.fillRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
+    // Background: alien planet surface or normal ground
+    if (isSurvival) {
+      // Dark alien planet with radial gradient
+      const bgGrad = ctx.createRadialGradient(MAP_WIDTH/2, MAP_HEIGHT/2, 200, MAP_WIDTH/2, MAP_HEIGHT/2, MAP_WIDTH * 0.8);
+      bgGrad.addColorStop(0, "#150010");
+      bgGrad.addColorStop(0.4, "#100015");
+      bgGrad.addColorStop(0.8, "#080006");
+      bgGrad.addColorStop(1, "#000000");
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
+    } else {
+      ctx.fillStyle = "#1a1d23";
+      ctx.fillRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
+    }
 
     // Grid lines
-    ctx.strokeStyle = "#ffffff08";
+    ctx.strokeStyle = isSurvival ? "#ff000008" : "#ffffff08";
     ctx.lineWidth = 1;
     ctx.beginPath();
     for (let x = 0; x <= MAP_WIDTH; x += TILE_SIZE) {
@@ -223,6 +243,84 @@ export function CanvasRenderer({
       ctx.lineTo(MAP_WIDTH, y);
     }
     ctx.stroke();
+
+    // Draw obstacles (survival mode)
+    if (isSurvival && gameState?.obstacles) {
+      gameState.obstacles.forEach(obs => {
+        ctx.save();
+        ctx.translate(obs.x, obs.y);
+        const r = obs.radius;
+
+        if (obs.type === 'ruin') {
+          // Alien ruins - purple/dark angular shapes
+          ctx.beginPath();
+          const pts = 6;
+          for (let i = 0; i < pts; i++) {
+            const a = (i / pts) * Math.PI * 2 - Math.PI / 6;
+            const rr = r * (0.6 + Math.sin(i * 2.3) * 0.4);
+            if (i === 0) ctx.moveTo(Math.cos(a) * rr, Math.sin(a) * rr);
+            else ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+          }
+          ctx.closePath();
+          ctx.fillStyle = "#1a0030";
+          ctx.fill();
+          ctx.strokeStyle = "#6b21a8";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          // Glow
+          const glow = ctx.createRadialGradient(0, 0, r * 0.2, 0, 0, r * 1.4);
+          glow.addColorStop(0, "rgba(139,92,246,0.15)");
+          glow.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.beginPath(); ctx.arc(0, 0, r * 1.4, 0, Math.PI * 2);
+          ctx.fillStyle = glow; ctx.fill();
+        } else if (obs.type === 'rock') {
+          // Alien rocks - dark red jagged
+          ctx.beginPath();
+          for (let i = 0; i < 8; i++) {
+            const a = (i / 8) * Math.PI * 2;
+            const rr = r * (0.55 + Math.sin(i * 1.7 + 0.5) * 0.45);
+            if (i === 0) ctx.moveTo(Math.cos(a) * rr, Math.sin(a) * rr);
+            else ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+          }
+          ctx.closePath();
+          ctx.fillStyle = "#1f0a0a";
+          ctx.fill();
+          ctx.strokeStyle = "#7f1d1d";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        } else {
+          // Wreck - metallic debris
+          ctx.save();
+          ctx.rotate(obs.x * 0.01); // deterministic angle
+          ctx.beginPath();
+          ctx.rect(-r * 0.9, -r * 0.3, r * 1.8, r * 0.6);
+          ctx.fillStyle = "#1c1917";
+          ctx.fill();
+          ctx.strokeStyle = "#44403c";
+          ctx.lineWidth = 3;
+          ctx.stroke();
+          // Broken wing
+          ctx.beginPath();
+          ctx.moveTo(-r * 0.4, -r * 0.3);
+          ctx.lineTo(-r * 0.8, -r * 0.8);
+          ctx.lineTo(-r * 0.2, -r * 0.3);
+          ctx.fillStyle = "#292524";
+          ctx.fill();
+          ctx.strokeStyle = "#57534e";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          // Glow ember
+          const glow2 = ctx.createRadialGradient(0, 0, 2, 0, 0, r * 0.6);
+          glow2.addColorStop(0, "rgba(255,100,0,0.2)");
+          glow2.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.beginPath(); ctx.arc(0, 0, r * 0.6, 0, Math.PI * 2);
+          ctx.fillStyle = glow2; ctx.fill();
+          ctx.restore();
+        }
+
+        ctx.restore();
+      });
+    }
 
     // Decorative ground details (vignette/noise)
     ctx.fillStyle = "rgba(0,0,0,0.1)";

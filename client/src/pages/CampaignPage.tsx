@@ -244,6 +244,7 @@ export default function CampaignPage() {
   const [textVisible, setTextVisible] = useState(true);
   const [muted, setMuted] = useState(false);
   const [selectedMission, setSelectedMission] = useState(0);
+  const [deploying, setDeploying] = useState(false);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
   const gainNodeRef = useRef<GainNode | null>(null);
@@ -623,12 +624,24 @@ export default function CampaignPage() {
                   background: MISSIONS[selectedMission].color,
                   color: "#000",
                   boxShadow: `0 0 30px ${MISSIONS[selectedMission].color}60`,
+                  opacity: deploying ? 0.6 : 1,
                 }}
-                onClick={() => {
-                  setLocation("/single-player");
+                disabled={deploying}
+                onClick={async () => {
+                  if (selectedMission !== 0) return; // Only mission 1 active for now
+                  setDeploying(true);
+                  try {
+                    stopAudio();
+                    window.speechSynthesis?.cancel();
+                    const res = await fetch('/api/game/create-survival', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+                    const data = await res.json();
+                    setLocation(`/game/${data.gameId}`);
+                  } catch {
+                    setDeploying(false);
+                  }
                 }}
               >
-                DEPLOY <ChevronRight className="w-4 h-4" />
+                {deploying ? 'LAUNCHING...' : 'DEPLOY'} <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
 
