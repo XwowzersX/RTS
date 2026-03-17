@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Construction, AlertTriangle, Play, Lock, Cpu } from "lucide-react";
+import { ChevronLeft, Play, Cpu } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 import quickPlayPng from "@assets/generated_images/generated_image.png";
-import campaignPng from "@assets/generated_images/generated_image.png";
 
 export default function SinglePlayerPage() {
   const [, setLocation] = useLocation();
@@ -48,22 +47,14 @@ export default function SinglePlayerPage() {
       </div>
 
       {/* Buttons Grid */}
-      <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-5xl px-4">
+      <div className="relative z-10 flex justify-center w-full max-w-lg px-4">
         <BigMenuButton
           label="Quick Play"
-          sub="Skirmish vs AI"
+          sub="Skirmish vs IronMind AI"
           image={quickPlayPng}
           fireColor="rgba(59, 130, 246, 0.6)"
           onClick={handleQuickPlay}
           icon={Play}
-        />
-        <BigMenuButton
-          label="Campaign"
-          sub="The Iron Chronicles"
-          image={campaignPng}
-          fireColor="rgba(156, 163, 175, 0.4)"
-          disabled={true}
-          icon={Lock}
         />
       </div>
 
