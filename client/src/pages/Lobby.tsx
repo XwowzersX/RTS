@@ -174,21 +174,35 @@ export default function Lobby() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-3xl px-4">
-          <MenuButton 
-            label="Single Player" 
-            sub="Under Construction"
-            fireColor="rgba(234, 179, 8, 0.6)" 
-            onClick={() => handleMenuClick('/single-player')}
-          />
-          <MenuButton 
-            label="Multiplayer" 
-            sub="Global Conflict"
-            fireColor="rgba(59, 130, 246, 0.6)" 
-            onClick={() => handleMenuClick(() => setView('multiplayer'))}
-          />
+        <div className="flex flex-col gap-6 w-full max-w-3xl px-4">
+          {/* Campaign - featured button */}
+          <div className="w-full">
+            <MenuButton 
+              label="Campaign" 
+              sub="The Veth War — Story Mode"
+              fireColor="rgba(239, 68, 68, 0.7)" 
+              onClick={() => handleMenuClick('/campaign')}
+              featured
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <MenuButton 
+              label="Quick Play" 
+              sub="Solo vs IronMind AI"
+              fireColor="rgba(234, 179, 8, 0.6)" 
+              onClick={() => handleMenuClick('/single-player')}
+            />
+            <MenuButton 
+              label="Multiplayer" 
+              sub="Global Conflict"
+              fireColor="rgba(59, 130, 246, 0.6)" 
+              onClick={() => handleMenuClick(() => setView('multiplayer'))}
+            />
+          </div>
+
           {user && (
-            <div className="md:col-span-2 flex justify-center">
+            <div className="flex justify-center">
               <MenuButton 
                 label="Stats" 
                 sub="Commander Record"
@@ -199,7 +213,7 @@ export default function Lobby() {
             </div>
           )}
           {!user && (
-            <div className="md:col-span-2 text-center">
+            <div className="text-center">
               <Link href="/auth">
                 <Button variant="link" className="text-white/40 hover:text-white uppercase tracking-[0.5em] text-xs">
                   Login to unlock Stats & Rankings
@@ -230,7 +244,7 @@ export default function Lobby() {
   );
 }
 
-function MenuButton({ label, sub, fireColor, onClick, className = "" }: any) {
+function MenuButton({ label, sub, fireColor, onClick, className = "", featured = false }: any) {
   const [isClicked, setIsClicked] = useState(false);
 
   const handleClick = () => {
@@ -244,20 +258,31 @@ function MenuButton({ label, sub, fireColor, onClick, className = "" }: any) {
   return (
     <motion.button
       whileHover={{ 
-        rotateX: -10, 
-        rotateY: 10,
-        scale: 1.05,
-        boxShadow: `0 0 40px ${fireColor}`
+        rotateX: featured ? 0 : -10, 
+        rotateY: featured ? 0 : 10,
+        scale: 1.03,
+        boxShadow: `0 0 ${featured ? 80 : 40}px ${fireColor}`
       }}
-      whileTap={{ scale: 0.95 }}
+      whileTap={{ scale: 0.97 }}
       onClick={handleClick}
       className={`
-        relative h-32 bg-white/5 border border-white/10 overflow-hidden group transition-all duration-300
-        flex flex-col items-center justify-center gap-1 hover:border-white/40 ${className}
+        relative ${featured ? 'h-24' : 'h-32'} bg-white/5 border overflow-hidden group transition-all duration-300
+        flex flex-col items-center justify-center gap-1 w-full ${className}
+        ${featured ? 'border-red-900/40 hover:border-red-500/60' : 'border-white/10 hover:border-white/40'}
         ${isClicked ? 'z-50' : ''}
       `}
       style={{ perspective: "1000px" }}
     >
+      {/* Featured: always-on subtle glow */}
+      {featured && (
+        <div 
+          className="absolute inset-0 opacity-30 pointer-events-none"
+          style={{
+            background: `radial-gradient(ellipse at 50% 140%, ${fireColor} 0%, transparent 70%)`,
+          }}
+        />
+      )}
+
       <div 
         className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
         style={{
@@ -273,7 +298,12 @@ function MenuButton({ label, sub, fireColor, onClick, className = "" }: any) {
         <div className="absolute bottom-0 left-3/4 w-1 h-full bg-gradient-to-t from-white to-transparent animate-bounce [animation-duration:1.2s]" />
       </div>
 
-      <span className="text-3xl font-black font-cinzel tracking-[0.2em] relative z-10 group-hover:text-white group-hover:scale-110 transition-all duration-300">
+      {featured && (
+        <span className="text-[10px] font-mono tracking-[0.5em] text-red-400/70 uppercase mb-0.5 relative z-10">
+          ▶ Story Mode — The Veth War
+        </span>
+      )}
+      <span className={`${featured ? 'text-4xl' : 'text-3xl'} font-black font-cinzel tracking-[0.2em] relative z-10 group-hover:text-white group-hover:scale-105 transition-all duration-300`}>
         {label}
       </span>
       <span className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground relative z-10 font-bold group-hover:text-white/60 transition-colors">

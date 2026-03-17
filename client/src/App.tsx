@@ -10,6 +10,7 @@ import Game from "@/pages/Game";
 import AuthPage from "@/pages/AuthPage";
 import StatsPage from "@/pages/StatsPage";
 import SinglePlayerPage from "@/pages/SinglePlayerPage";
+import CampaignPage from "@/pages/CampaignPage";
 
 function Router() {
   return (
@@ -18,6 +19,7 @@ function Router() {
       <Route path="/auth" component={AuthPage} />
       <Route path="/stats" component={StatsPage} />
       <Route path="/single-player" component={SinglePlayerPage} />
+      <Route path="/campaign" component={CampaignPage} />
       <Route path="/game/:id" component={Game} />
       <Route component={NotFound} />
     </Switch>
